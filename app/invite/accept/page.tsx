@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +9,6 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function AcceptInvitationPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const token = searchParams.get("token");
@@ -21,37 +20,37 @@ export default function AcceptInvitationPage() {
   const [acceptanceMessage, setAcceptanceMessage] = useState<string>("");
 
   useEffect(() => {
+    const fetchInvitation = async () => {
+      try {
+        const response = await fetch(`/api/invitations/validate?token=${token}`);
+        const data = await response.json();
+
+        if (data.error) {
+          toast({
+            title: "Error",
+            description: data.error,
+            variant: "destructive",
+          });
+        } else {
+          setInvitation(data.invitation);
+        }
+      } catch {
+        toast({
+          title: "Error",
+          description: "Failed to load invitation. Please check the link.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     if (token) {
       fetchInvitation();
     } else {
       setIsLoading(false);
     }
-  }, [token]);
-
-  const fetchInvitation = async () => {
-    try {
-      const response = await fetch(`/api/invitations/validate?token=${token}`);
-      const data = await response.json();
-
-      if (data.error) {
-        toast({
-          title: "Error",
-          description: data.error,
-          variant: "destructive",
-        });
-      } else {
-        setInvitation(data.invitation);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load invitation. Please check the link.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [token, toast]);
 
   const handleAccept = async () => {
     setIsAccepting(true);
@@ -60,9 +59,7 @@ export default function AcceptInvitationPage() {
       const response = await fetch("/api/invitations/accept", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token,
-        }),
+        body: JSON.stringify({ token }),
       });
 
       const data = await response.json();
@@ -81,7 +78,7 @@ export default function AcceptInvitationPage() {
           description: data.message || "Invitation accepted successfully!",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to accept invitation. Please try again.",
@@ -135,9 +132,7 @@ export default function AcceptInvitationPage() {
               <XCircle className="h-5 w-5 text-red-600" />
               <span>Invitation Not Found</span>
             </CardTitle>
-            <CardDescription>
-              This invitation may have expired or already been used.
-            </CardDescription>
+            <CardDescription>This invitation may have expired or already been used.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full">
@@ -161,9 +156,7 @@ export default function AcceptInvitationPage() {
                 <XCircle className="h-5 w-5 text-red-600" />
               )}
               <span>
-                {invitation.status === "ACCEPTED"
-                  ? "Invitation Already Accepted"
-                  : "Invitation Expired"}
+                {invitation.status === "ACCEPTED" ? "Invitation Already Accepted" : "Invitation Expired"}
               </span>
             </CardTitle>
             <CardDescription>
@@ -217,14 +210,12 @@ export default function AcceptInvitationPage() {
               <CheckCircle2 className="h-8 w-8 text-green-600" />
               <span>Welcome to {invitation.company?.name || "TimeTrack"}!</span>
             </CardTitle>
-            <CardDescription className="text-center">
-              Your invitation has been accepted successfully
-            </CardDescription>
+            <CardDescription className="text-center">Your invitation has been accepted successfully</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center space-y-2">
               <p className="text-muted-foreground whitespace-pre-line">
-                {acceptanceMessage || `You've been successfully added to ${invitation.company?.name}.`}
+                {acceptanceMessage || `You&apos;ve been successfully added to ${invitation.company?.name}.`}
               </p>
               <p className="text-sm text-muted-foreground mt-4">
                 You don&apos;t need to log in. Your employer will manage your attendance and timesheets.
@@ -245,7 +236,7 @@ export default function AcceptInvitationPage() {
             <span>Accept Invitation</span>
           </CardTitle>
           <CardDescription>
-            You've been invited to join {invitation.company?.name || "a company"} on TimeTrack
+            You have been invited to join {invitation.company?.name || "a company"} on TimeTrack
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -268,12 +259,7 @@ export default function AcceptInvitationPage() {
             <p className="text-sm text-muted-foreground text-center">
               Click the button below to accept this invitation and be added to the company.
             </p>
-            <Button 
-              onClick={handleAccept} 
-              className="w-full" 
-              disabled={isAccepting}
-              size="lg"
-            >
+            <Button onClick={handleAccept} className="w-full" disabled={isAccepting} size="lg">
               {isAccepting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
