@@ -1,0 +1,298 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// PostgreSQL supports enums, but we're using String for flexibility
+// Role values: "ADMIN", "EMPLOYER"
+// Note: Employees are NOT in User table - they are in EmployeeProfile table only
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  name               String?
+  email              String    @unique
+  emailVerified      DateTime?
+  password           String?
+  image              String?
+  role               String    @default("EMPLOYER") // Only ADMIN and EMPLOYER can log in
+  onboardingCompleted Boolean  @default(false)
+  onboardingStep     Int       @default(0) // 0 = not started, 1 = personal, 2 = company, 3 = preferences, 4 = complete
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  accounts           Account[]
+  sessions           Session[]
+  companyMemberships CompanyMembership[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Company {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  invitationMessage String?  // Custom invitation email message template
+  phone             String?  // Company phone number
+  address           String?  // Company address
+  website           String?  // Company website URL
+  industry          String?  // Industry/sector
+  companySize       String?  // Company size (e.g., "1-10", "11-50", "51-200", "201-500", "500+")
+  timezone          String?  @default("UTC") // Company timezone
+  country           String?  // Country/region
+  taxId             String?  // Tax ID/EIN (optional, for enterprise)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  members          CompanyMembership[]
+  employeeProfiles EmployeeProfile[]
+  nfcCards         NFCCard[]
+  attendanceEvents AttendanceEvent[]
+  invitations      Invitation[]
+  subscription     Subscription?
+  payments         Payment[]
+}
+
+model CompanyMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@index([userId])
+  @@index([companyId, role]) // Optimize employer count queries
+}
+
+model EmployeeProfile {
+  id                  String    @id @default(cuid())
+  name                String    // Employee name
+  email               String?   // Optional email (for sending reports)
+  companyId           String
+  photo               String?
+  employeeId          String?   @unique // Employee number/badge ID (unique identifier)
+  phone               String?
+  address             String?
+  dateOfBirth         DateTime? // Date of birth
+  salaryRate          Float? // Salary rate per hour/day/month
+  employmentStartDate DateTime? // Employment start date
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  nfcCards        NFCCard[]
+  attendanceEvents AttendanceEvent[]
+  timesheets      Timesheet[]
+
+  @@index([companyId])
+  @@index([companyId, isActive]) // Optimize active employee queries
+  @@index([employeeId]) // For quick lookup by employee ID
+}
+
+model NFCCard {
+  id                String    @id @default(cuid())
+  uid               String    @unique // NFC card UID/token
+  employeeProfileId String    // Employee who owns this card
+  companyId         String
+  isActive           Boolean   @default(true)
+  registeredAt       DateTime  @default(now())
+  registeredBy      String?   // User ID (employer/admin) who registered it
+  lastUsedAt        DateTime?
+
+  employeeProfile   EmployeeProfile @relation(fields: [employeeProfileId], references: [id], onDelete: Cascade)
+  company           Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  attendanceEvents  AttendanceEvent[]
+
+  @@index([uid])
+  @@index([employeeProfileId])
+  @@index([companyId])
+}
+
+model AttendanceEvent {
+  id                String   @id @default(cuid())
+  employeeProfileId String   // Employee who clocked in/out
+  companyId         String
+  nfcCardId         String?
+  eventType         String   // "CLOCK_IN" or "CLOCK_OUT"
+  locationLat       Float
+  locationLng       Float
+  accuracyMeters    Float
+  address           String?
+  capturedAt        DateTime @default(now())
+  deviceInfo        String?  // Browser/user agent info
+  notes             String?
+
+  employeeProfile   EmployeeProfile @relation(fields: [employeeProfileId], references: [id], onDelete: Cascade)
+  company           Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  nfcCard           NFCCard?        @relation(fields: [nfcCardId], references: [id], onDelete: SetNull)
+  timesheetAsClockIn  Timesheet[]   @relation("TimesheetClockIn")
+  timesheetAsClockOut Timesheet[]   @relation("TimesheetClockOut")
+
+  @@index([employeeProfileId, capturedAt])
+  @@index([companyId, capturedAt])
+  @@index([nfcCardId])
+  @@index([eventType, capturedAt])
+}
+
+model Timesheet {
+  id                String   @id @default(cuid())
+  employeeProfileId String   // Employee this timesheet belongs to
+  companyId         String
+  date              DateTime
+  clockInId         String?
+  clockOutId        String?
+  hoursWorked       Float?
+  breakMinutes      Int      @default(0)
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  employeeProfile EmployeeProfile @relation(fields: [employeeProfileId], references: [id], onDelete: Cascade)
+  clockIn         AttendanceEvent? @relation("TimesheetClockIn", fields: [clockInId], references: [id], onDelete: SetNull)
+  clockOut        AttendanceEvent? @relation("TimesheetClockOut", fields: [clockOutId], references: [id], onDelete: SetNull)
+
+  @@unique([employeeProfileId, companyId, date])
+  @@index([employeeProfileId, date])
+  @@index([companyId, date])
+}
+
+model Report {
+  id          String    @id @default(cuid())
+  companyId   String?
+  generatedBy String // User ID
+  type        String // "ATTENDANCE", "TIMESHEET", etc.
+  format      String // "CSV", "EXCEL"
+  status      String    @default("PENDING") // "PENDING", "PROCESSING", "COMPLETED", "FAILED"
+  fileUrl     String?
+  parameters  String? // JSON of query parameters
+  error       String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([companyId])
+  @@index([generatedBy])
+  @@index([status])
+}
+
+model Invitation {
+  id         String    @id @default(cuid())
+  token      String    @unique
+  email      String
+  name       String
+  companyId  String
+  invitedBy  String // User ID who sent the invitation
+  employeeId String? // Optional employee ID/badge
+  phone      String?
+  address    String?
+  status     String    @default("PENDING") // "PENDING", "ACCEPTED", "EXPIRED", "REJECTED"
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([email])
+  @@index([companyId])
+  @@index([status])
+}
+
+// Subscription Plans
+// Plan values: "FREE", "BASIC", "PRO", "ENTERPRISE"
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  companyId            String    @unique
+  plan                 String    @default("FREE") // "FREE", "BASIC", "PRO", "ENTERPRISE"
+  status               String    @default("ACTIVE") // "ACTIVE", "CANCELED", "PAST_DUE", "TRIAL"
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  canceledAt           DateTime?
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([status])
+  @@index([plan])
+}
+
+model Payment {
+  id                    String    @id @default(cuid())
+  companyId             String
+  subscriptionId        String?
+  amount                Float // Amount in cents
+  currency              String    @default("usd")
+  status                String // "SUCCEEDED", "PENDING", "FAILED", "REFUNDED"
+  stripePaymentIntentId String?   @unique
+  stripeInvoiceId       String?
+  description           String?
+  metadata              String? // JSON metadata
+  paidAt                DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([stripePaymentIntentId])
+}
