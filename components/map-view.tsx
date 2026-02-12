@@ -64,11 +64,12 @@ export function MapView({ lat, lng, address, multiplePoints }: MapViewProps) {
       iframe.frameBorder = "0";
       iframe.style.border = "0";
       
-      mapRef.current.appendChild(iframe);
+      const container = mapRef.current;
+      container.appendChild(iframe);
 
       return () => {
-        if (mapRef.current && mapRef.current.contains(iframe)) {
-          mapRef.current.removeChild(iframe);
+        if (container.contains(iframe)) {
+          container.removeChild(iframe);
         }
       };
     }

@@ -29,28 +29,22 @@ export async function GET(req: NextRequest) {
     const employees = await prisma.employeeProfile.findMany({
       where: {
         companyId,
-        user: {
-          OR: [
-            { name: { contains: queryLower } },
-            { email: { contains: queryLower } },
-          ],
-        },
+        OR: [
+          { name: { contains: queryLower, mode: "insensitive" } },
+          { email: { contains: queryLower, mode: "insensitive" } },
+        ],
       },
       take: 5,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+      select: {
+        id: true,
+        name: true,
+        email: true,
       },
     });
 
     const suggestions = employees.map((employee) => ({
-      id: employee.id, // Use employee profile ID for navigation
-      text: employee.user.name || employee.user.email,
+      id: employee.id,
+      text: (employee.name || employee.email) ?? "",
       type: "Employee",
     }));
 

@@ -8,14 +8,8 @@ declare module "next-auth" {
       name?: string | null;
       role: string; // "ADMIN" | "EMPLOYER" | "EMPLOYEE"
       companyMemberships?: Array<{
-        id: string;
         companyId: string;
         role: string;
-        company: {
-          id: string;
-          name: string;
-          slug: string;
-        };
       }>;
     };
   }
@@ -26,14 +20,8 @@ declare module "next-auth" {
     name?: string | null;
     role: string;
     companyMemberships?: Array<{
-      id: string;
       companyId: string;
-      role: Role;
-      company: {
-        id: string;
-        name: string;
-        slug: string;
-      };
+      role: string;
     }>;
   }
 }
@@ -43,14 +31,8 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     companyMemberships?: Array<{
-      id: string;
       companyId: string;
-      role: Role;
-      company: {
-        id: string;
-        name: string;
-        slug: string;
-      };
+      role: string;
     }>;
   }
 }

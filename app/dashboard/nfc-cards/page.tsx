@@ -32,10 +32,10 @@ export default async function NFCCardsPage({
     where.OR = [
       { uid: { contains: searchLower } },
       {
-        user: {
+        employeeProfile: {
           OR: [
-            { name: { contains: searchLower } },
-            { email: { contains: searchLower } },
+            { name: { contains: searchLower, mode: "insensitive" } },
+            { email: { contains: searchLower, mode: "insensitive" } },
           ],
         },
       },
@@ -45,11 +45,7 @@ export default async function NFCCardsPage({
   const nfcCards = await prisma.nFCCard.findMany({
     where,
     include: {
-      user: {
-        include: {
-          employeeProfile: true,
-        },
-      },
+      employeeProfile: true,
     },
     orderBy: { registeredAt: "desc" },
   });
@@ -90,7 +86,7 @@ export default async function NFCCardsPage({
                   <div>
                     <p className="font-medium">UID: {card.uid}</p>
                     <p className="text-sm text-muted-foreground">
-                      Assigned to: {card.user.name || card.user.email}
+                      Assigned to: {(card.employeeProfile.name || card.employeeProfile.email) ?? "—"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Registered: {format(card.registeredAt, "MMM d, yyyy")}

@@ -98,6 +98,9 @@ export default async function ReportsPage({
           select: {
             id: true,
             capturedAt: true,
+            locationLat: true,
+            locationLng: true,
+            address: true,
             employeeProfile: {
               select: {
                 id: true,
@@ -111,6 +114,9 @@ export default async function ReportsPage({
           select: {
             id: true,
             capturedAt: true,
+            locationLat: true,
+            locationLng: true,
+            address: true,
             employeeProfile: {
               select: {
                 id: true,

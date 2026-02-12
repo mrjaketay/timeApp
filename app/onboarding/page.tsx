@@ -107,6 +107,7 @@ export default function OnboardingPage() {
     setIsLoading(true);
     try {
       const result = await completeOnboarding({
+        timezone: "UTC",
         step: STEPS.length,
       });
 

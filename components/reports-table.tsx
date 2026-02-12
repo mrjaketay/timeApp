@@ -25,7 +25,7 @@ interface Timesheet {
   } | null;
   user: {
     name: string | null;
-    email: string;
+    email: string | null;
   };
 }
 
@@ -53,7 +53,7 @@ export function ReportsTable({ timesheets, reportType = "TIMESHEET" }: ReportsTa
           {timesheets.map((timesheet) => (
             <tr key={timesheet.id} className="border-b">
               <td className="p-2">
-                {timesheet.user.name || timesheet.user.email}
+                {(timesheet.user.name || timesheet.user.email) ?? "—"}
               </td>
               <td className="p-2">{format(timesheet.date, "MMM d, yyyy")}</td>
               <td className="p-2">

@@ -54,7 +54,7 @@ export default function PricingPage() {
         });
         router.push("/dashboard/billing");
         router.refresh();
-      } else if (result.url) {
+      } else if ("url" in result && typeof result.url === "string") {
         // If Stripe checkout URL is returned (future implementation)
         window.location.href = result.url;
       }

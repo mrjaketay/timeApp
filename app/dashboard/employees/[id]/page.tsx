@@ -105,7 +105,7 @@ export default async function EmployeeProfilePage({
                     employeeId={employee.id}
                     currentPhoto={employee.photo}
                     employeeName={employee.name}
-                    employeeEmail={employee.email || undefined}
+                    employeeEmail={employee.email ?? ""}
                   />
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">

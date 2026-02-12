@@ -11,16 +11,36 @@ export default async function MyTimesheetsPage() {
     redirect("/clock");
   }
 
-  const userId = session.user.id;
+  const userEmail = session.user.email;
   const companyId = session.user.companyMemberships?.[0]?.companyId;
 
-  if (!companyId) {
+  if (!companyId || !userEmail) {
     return <div>No company found</div>;
+  }
+
+  // Timesheets are keyed by EmployeeProfile; resolve current user to employee in this company (e.g. by email)
+  const employee = await prisma.employeeProfile.findFirst({
+    where: {
+      companyId,
+      email: userEmail,
+      isActive: true,
+    },
+  });
+
+  if (!employee) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">My Timesheets</h1>
+          <p className="text-muted-foreground">No employee profile found for your account in this company.</p>
+        </div>
+      </div>
+    );
   }
 
   const timesheets = await prisma.timesheet.findMany({
     where: {
-      userId,
+      employeeProfileId: employee.id,
       companyId,
     },
     include: {

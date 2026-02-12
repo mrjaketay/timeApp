@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { register } from "@/app/actions/auth";
 import { Clock, Mail, Lock, User, Building2, Eye, EyeOff, CheckCircle2, Sparkles, ArrowRight } from "lucide-react";
 import { ReCaptcha } from "@/components/recaptcha";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -442,5 +442,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -37,10 +37,10 @@ export async function GET(req: NextRequest) {
         OR: [
           { uid: { contains: queryLower } },
           {
-            user: {
+            employeeProfile: {
               OR: [
-                { name: { contains: queryLower } },
-                { email: { contains: queryLower } },
+                { name: { contains: queryLower, mode: "insensitive" } },
+                { email: { contains: queryLower, mode: "insensitive" } },
               ],
             },
           },
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       },
       take: 5,
       include: {
-        user: {
+        employeeProfile: {
           select: {
             id: true,
             name: true,
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     const suggestions = nfcCards.map((card) => ({
       id: card.id,
-      text: `${card.user.name || card.user.email} (${card.uid})`,
+      text: `${(card.employeeProfile.name || card.employeeProfile.email) ?? ""} (${card.uid})`.trim() || card.uid,
       type: "NFC Card",
     }));
 

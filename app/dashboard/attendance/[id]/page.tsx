@@ -28,11 +28,7 @@ export default async function AttendanceDetailPage({
   const event = await prisma.attendanceEvent.findUnique({
     where: { id: params.id },
     include: {
-      user: {
-        include: {
-          employeeProfile: true,
-        },
-      },
+      employeeProfile: true,
       nfcCard: true,
     },
   });
@@ -64,7 +60,7 @@ export default async function AttendanceDetailPage({
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground">Employee</p>
-              <p className="font-medium">{event.user.name || event.user.email}</p>
+              <p className="font-medium">{(event.employeeProfile.name || event.employeeProfile.email) ?? "—"}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Event Type</p>

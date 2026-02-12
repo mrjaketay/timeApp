@@ -44,12 +44,10 @@ export default async function ManageAttendancePage({
 
   if (searchParams.search) {
     const searchLower = searchParams.search.toLowerCase();
-    where.user = {
-      OR: [
-        { name: { contains: searchLower } },
-        { email: { contains: searchLower } },
-      ],
-    };
+    where.OR = [
+      { name: { contains: searchLower, mode: "insensitive" } },
+      { email: { contains: searchLower, mode: "insensitive" } },
+    ];
   }
 
   // Get all active employees - optimized
