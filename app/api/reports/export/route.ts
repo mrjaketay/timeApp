@@ -36,14 +36,14 @@ export async function GET(req: NextRequest) {
 
     // Filter by employee if provided
     if (employeeId) {
-      whereClause.userId = employeeId;
+      whereClause.employeeProfileId = employeeId;
     }
 
     // Get attendance events for date range
     const events = await prisma.attendanceEvent.findMany({
       where: whereClause,
       include: {
-        user: true,
+        employeeProfile: true,
       },
       orderBy: { capturedAt: "asc" },
     });
@@ -66,8 +66,8 @@ export async function GET(req: NextRequest) {
       const rows = events.map((event) => [
         event.capturedAt.toISOString().split("T")[0],
         event.capturedAt.toTimeString().split(" ")[0],
-        event.user.name || "",
-        event.user.email,
+        event.employeeProfile.name || "",
+        event.employeeProfile.email ?? "",
         event.eventType,
         event.locationLat.toString(),
         event.locationLng.toString(),
