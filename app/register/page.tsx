@@ -221,7 +221,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold mb-1">Built for Scale</h3>
-                  <p className="text-sm text-muted-foreground">From startups to enterprises, we've got you covered.</p>
+                  <p className="text-sm text-muted-foreground">From startups to enterprises, we&apos;ve got you covered.</p>
                 </div>
               </div>
             </div>
