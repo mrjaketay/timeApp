@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Users, Clock, DollarSign } from "lucide-react";
-import { format } from "date-fns";
 import { WelcomeMessage } from "@/components/welcome-message";
 import { RecentActivityGrouped } from "@/components/admin/recent-activity-grouped";
 
@@ -15,7 +14,6 @@ export default async function AdminDashboardPage() {
   }
 
   if (session.user.role !== "ADMIN") {
-    // Redirect based on actual role
     if (session.user.role === "EMPLOYEE") {
       redirect("/clock");
     } else {
@@ -44,9 +42,8 @@ export default async function AdminDashboardPage() {
     }),
   ]);
 
-  // Get recent activity - only fetch what we need for display (limit to prevent slow queries)
   const recentActivity = await prisma.attendanceEvent.findMany({
-    take: 50, // Reduced from 100 for better performance
+    take: 50,
     orderBy: { capturedAt: "desc" },
     select: {
       id: true,
@@ -68,6 +65,22 @@ export default async function AdminDashboardPage() {
       },
     },
   });
+
+  const activities = recentActivity.map((event) => ({
+    id: event.id,
+    eventType: event.eventType,
+    capturedAt: event.capturedAt,
+    company: {
+      id: event.company?.id ?? "",
+      name: event.company?.name ?? "Unknown Company",
+    },
+    employeeProfile: {
+      id: event.employeeProfile?.id ?? "",
+      name: event.employeeProfile?.name ?? "Unknown",
+      email: event.employeeProfile?.email ?? "unknown@example.com",
+      employeeId: event.employeeProfile?.employeeId ?? "",
+    },
+  }));
 
   return (
     <div className="space-y-6">
@@ -129,25 +142,10 @@ export default async function AdminDashboardPage() {
           <CardDescription>Latest clock in/out events grouped by company and date</CardDescription>
         </CardHeader>
         <CardContent>
-          {recentActivity.length > 0 ? (
-            <RecentActivityGrouped activities={recentActivity.map(event => ({
-              id: event.id,
-              eventType: event.eventType,
-              capturedAt: event.capturedAt,
-              user: {
-                name: event.employeeProfile?.name || "Unknown",
-                email: event.employeeProfile?.email || "unknown@example.com",
-              },
-              company: {
-                id: event.company?.id || "",
-                name: event.company?.name || "Unknown Company",
-              },
-              employeeProfile: (event as any).employeeProfile ?? null,
-            }))} />
+          {activities.length > 0 ? (
+            <RecentActivityGrouped activities={activities as any} />
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No recent activity
-            </div>
+            <div className="text-center py-8 text-muted-foreground">No recent activity</div>
           )}
         </CardContent>
       </Card>
