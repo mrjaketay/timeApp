@@ -12,16 +12,29 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userEmail = session.user.email;
     const companyId = session.user.companyMemberships?.[0]?.companyId;
 
-    if (!companyId) {
+    if (!companyId || !userEmail) {
       return NextResponse.json({ error: "No company found" }, { status: 400 });
+    }
+
+    // Attendance events are keyed by EmployeeProfile; resolve current user to employee in this company (e.g. by email)
+    const employee = await prisma.employeeProfile.findFirst({
+      where: {
+        companyId,
+        email: userEmail,
+        isActive: true,
+      },
+    });
+
+    if (!employee) {
+      return NextResponse.json({ event: null });
     }
 
     const lastEvent = await prisma.attendanceEvent.findFirst({
       where: {
-        userId,
+        employeeProfileId: employee.id,
         companyId,
       },
       orderBy: {
