@@ -15,15 +15,13 @@ export default async function AdminUsersPage({
     redirect("/dashboard");
   }
 
-  // Optimize: Only fetch what we need, use select instead of include where possible
+  // Fetch companies + employers + employees (using fields that exist on EmployeeProfile)
   const companies = await prisma.company.findMany({
     select: {
       id: true,
       name: true,
       members: {
-        where: {
-          role: "EMPLOYER",
-        },
+        where: { role: "EMPLOYER" },
         select: {
           user: {
             select: {
@@ -38,25 +36,20 @@ export default async function AdminUsersPage({
       },
       employeeProfiles: {
         select: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              createdAt: true,
-            },
-          },
+          id: true,
+          name: true,
+          email: true,
+          employeeId: true,
+          isActive: true,
+          createdAt: true,
         },
       },
     },
     orderBy: { name: "asc" },
   });
 
-  // Get all admins
   const adminUsers = await prisma.user.findMany({
-    where: {
-      role: "ADMIN",
-    },
+    where: { role: "ADMIN" },
     select: {
       id: true,
       name: true,
@@ -66,9 +59,7 @@ export default async function AdminUsersPage({
     orderBy: { createdAt: "desc" },
   });
 
-  // Transform data for hierarchical component
   const companiesData = companies.map((company) => {
-    // Get employers (users with EMPLOYER role in this company)
     const employers = company.members.map((membership) => ({
       id: membership.user.id,
       name: membership.user.name,
@@ -79,20 +70,16 @@ export default async function AdminUsersPage({
       companyName: company.name,
     }));
 
-    // Get employees - they belong to the company but aren't directly assigned to specific employers
-    // We'll show them under the company, and they can be viewed as a group
-    const employees = company.employeeProfiles.map((profile) => {
-      return {
-        id: profile.user.id,
-        name: profile.user.name,
-        email: profile.user.email,
-        createdAt: profile.user.createdAt,
-        companyId: company.id,
-        companyName: company.name,
-        employerId: "", // Employees aren't directly assigned to specific employers
-        employerName: "",
-      };
-    });
+    const employees = company.employeeProfiles.map((profile) => ({
+      id: profile.id,
+      name: profile.name || "Unknown",
+      email: profile.email || "unknown@example.com",
+      createdAt: profile.createdAt,
+      companyId: company.id,
+      companyName: company.name,
+      employerId: "",
+      employerName: "",
+    }));
 
     return {
       id: company.id,
@@ -102,53 +89,44 @@ export default async function AdminUsersPage({
     };
   });
 
-  // Apply search filter if provided
   let filteredCompanies = companiesData;
   let filteredAdmins = adminUsers;
 
   if (searchParams.search) {
     const searchLower = searchParams.search.toLowerCase();
-    
-    // Filter companies
+
     filteredCompanies = companiesData
       .map((company) => {
         const companyNameMatches = company.name.toLowerCase().includes(searchLower);
-        
-        // If company name matches, show ALL employers and employees (don't filter them)
-        // If company name doesn't match, only show matching users
+
         const filteredEmployers = companyNameMatches
-          ? company.employers // Show all if company matches
+          ? company.employers
           : company.employers.filter(
               (emp) =>
                 emp.name?.toLowerCase().includes(searchLower) ||
                 emp.email.toLowerCase().includes(searchLower)
             );
-        
+
         const filteredEmployees = companyNameMatches
-          ? company.employees // Show all if company matches
+          ? company.employees
           : company.employees.filter(
               (emp) =>
                 emp.name?.toLowerCase().includes(searchLower) ||
                 emp.email.toLowerCase().includes(searchLower)
             );
 
-        // Only include company if it has matching users or company name matches
-        if (
-          companyNameMatches ||
-          filteredEmployers.length > 0 ||
-          filteredEmployees.length > 0
-        ) {
+        if (companyNameMatches || filteredEmployers.length > 0 || filteredEmployees.length > 0) {
           return {
             ...company,
             employers: filteredEmployers,
             employees: filteredEmployees,
           };
         }
+
         return null;
       })
       .filter((c) => c !== null) as typeof companiesData;
 
-    // Filter admins
     filteredAdmins = adminUsers.filter(
       (admin) =>
         admin.name?.toLowerCase().includes(searchLower) ||
@@ -167,9 +145,7 @@ export default async function AdminUsersPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Users</h1>
-        <p className="text-muted-foreground">
-          Manage all system users organized by company hierarchy
-        </p>
+        <p className="text-muted-foreground">Manage all system users organized by company hierarchy</p>
       </div>
 
       <Card>
