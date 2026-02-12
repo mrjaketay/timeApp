@@ -142,6 +142,7 @@ export default async function AdminDashboardPage() {
                 id: event.company?.id || "",
                 name: event.company?.name || "Unknown Company",
               },
+              employeeProfile: (event as any).employeeProfile ?? null,
             }))} />
           ) : (
             <div className="text-center py-8 text-muted-foreground">
