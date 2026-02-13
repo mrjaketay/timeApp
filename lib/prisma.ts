@@ -4,16 +4,20 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// Use placeholder during build when DATABASE_URL is not set (e.g. Netlify build step).
+// At runtime the real DATABASE_URL is injected by the host.
+const databaseUrl =
+  process.env.DATABASE_URL || "postgresql://localhost:5432/build";
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" 
-      ? ["error", "warn"] // Only log errors and warnings in dev, not all queries
+    log: process.env.NODE_ENV === "development"
+      ? ["error", "warn"]
       : ["error"],
-    // Performance optimizations
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
+        url: databaseUrl,
       },
     },
   });
