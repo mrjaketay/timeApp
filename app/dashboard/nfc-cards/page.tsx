@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Plus, Radio } from "lucide-react";
 import Link from "next/link";
+import { NFCCopyTapLink } from "@/components/nfc-copy-tap-link";
 
 export default async function NFCCardsPage({
   searchParams,
@@ -69,7 +70,7 @@ export default async function NFCCardsPage({
         <CardHeader>
           <CardTitle>Registered Cards</CardTitle>
           <CardDescription>
-            {nfcCards.length} {nfcCards.length === 1 ? "card" : "cards"} registered
+            {nfcCards.length} {nfcCards.length === 1 ? "card" : "cards"} registered. Use &quot;Copy tap link&quot; and write that URL to the physical NFC tag (e.g. with NFC Tools); then tapping the card on a phone will open the link and clock the employee in or out.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -94,7 +95,8 @@ export default async function NFCCardsPage({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <NFCCopyTapLink uid={card.uid} />
                   {card.isActive ? (
                     <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
                       Active

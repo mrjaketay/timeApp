@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Radio, Loader2 } from "lucide-react";
+import { ArrowLeft, Radio, Loader2, Copy, Check } from "lucide-react";
 import Link from "next/link";
 import { registerNFCCard } from "@/app/actions/nfc";
 
@@ -37,6 +37,13 @@ export default function RegisterNFCCardPage() {
   });
   const [nfcSupported, setNfcSupported] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [registeredUid, setRegisteredUid] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const tapUrl =
+    typeof window !== "undefined" && registeredUid
+      ? `${window.location.origin}/tap?card=${encodeURIComponent(registeredUid)}`
+      : "";
 
   useEffect(() => {
     fetchEmployees();
@@ -150,9 +157,9 @@ export default function RegisterNFCCardPage() {
       } else {
         toast({
           title: "Success",
-          description: "NFC card registered successfully!",
+          description: "NFC card registered. Write the tap URL to your card.",
         });
-        router.push("/dashboard/nfc-cards");
+        setRegisteredUid(formData.uid.trim());
       }
     } catch (error) {
       toast({
@@ -164,6 +171,67 @@ export default function RegisterNFCCardPage() {
       setIsSubmitting(false);
     }
   };
+
+  const copyTapUrl = async () => {
+    if (!tapUrl) return;
+    try {
+      await navigator.clipboard.writeText(tapUrl);
+      setCopied(true);
+      toast({ title: "Copied", description: "Tap URL copied to clipboard." });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+
+  if (registeredUid) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/dashboard/nfc-cards">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Link>
+          </Button>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Card registered</CardTitle>
+            <CardDescription>
+              Write this URL to your NFC tag so a tap opens it and clocks the employee in or out.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input readOnly value={tapUrl} className="font-mono text-sm" />
+              <Button onClick={copyTapUrl} variant="secondary" className="shrink-0">
+                {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                {copied ? "Copied" : "Copy URL"}
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Use an NFC write app (e.g. NFC Tools) to write this URL to the physical card. After that, tapping the card on a phone will open this link and clock the employee in or out (location required).
+            </p>
+            <div className="flex gap-2 pt-2">
+              <Button asChild>
+                <Link href="/dashboard/nfc-cards">Back to NFC cards</Link>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRegisteredUid(null);
+                  setFormData({ uid: "", employeeProfileId: formData.employeeProfileId });
+                }}
+              >
+                Register another card
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
