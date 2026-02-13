@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/get-session";
 import { redirect } from "next/navigation";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
 
 export default async function DashboardLayout({
   children,
@@ -24,23 +23,24 @@ export default async function DashboardLayout({
       redirect("/clock");
     }
 
-    // For EMPLOYER role, companyMemberships should exist
     const companyId = session.user.companyMemberships?.[0]?.companyId;
 
     return (
-      <div className="min-h-screen relative">
+      <div className="min-h-screen relative min-h-[100dvh]">
         {/* Subtle animated background */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-blue-400/5 dark:bg-blue-500/5 rounded-full blur-3xl animate-blob"></div>
           <div className="absolute bottom-0 left-0 w-1/3 h-1/3 bg-purple-400/5 dark:bg-purple-500/5 rounded-full blur-3xl animate-blob animation-delay-[2s]"></div>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1/4 h-1/4 bg-indigo-400/5 dark:bg-indigo-500/5 rounded-full blur-3xl animate-blob animation-delay-[4s]"></div>
         </div>
-        
-        <Sidebar role={session.user.role} companyId={companyId} />
-        <div className="md:pl-64 flex flex-col flex-1 relative z-10">
-          <Topbar user={session.user} />
-          <main className="flex-1 p-6 lg:p-8">{children}</main>
-        </div>
+
+        <DashboardShell
+          role={session.user.role}
+          companyId={companyId}
+          user={session.user}
+        >
+          {children}
+        </DashboardShell>
       </div>
     );
   } catch (error) {

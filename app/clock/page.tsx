@@ -257,21 +257,21 @@ export default function ClockPage() {
   const canClockOut = lastEvent?.type === "CLOCK_IN";
 
   return (
-    <div className="max-w-md mx-auto space-y-6">
-      <div className="text-center mb-4">
+    <div className="w-full max-w-md mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6">
+      <div className="text-center mb-3 sm:mb-4">
         <WelcomeMessage userName={session?.user?.name || null} />
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
+      <Card className="border border-border/50 sm:border-2 shadow-sm sm:shadow-md">
+        <CardHeader className="px-4 sm:px-6 pb-2">
+          <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+            <Clock className="h-5 w-5 shrink-0" />
             <span>Clock In/Out</span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             {format(currentTime, "EEEE, MMMM d, yyyy • HH:mm:ss")}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-5 sm:space-y-6 px-4 sm:px-6 pb-6">
           {/* Location Status */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">

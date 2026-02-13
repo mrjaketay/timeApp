@@ -158,21 +158,20 @@ function RegisterForm() {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
-      {/* Animated Background Elements */}
+    <div className="min-h-screen min-h-[100dvh] flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
+      {/* Background: subtle on mobile */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-400/20 dark:bg-blue-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-purple-400/20 dark:bg-purple-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-[2s]"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-[4s]"></div>
+        <div className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-blue-400/15 sm:bg-blue-400/20 dark:bg-blue-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-60 sm:opacity-70 animate-blob"></div>
+        <div className="absolute top-1/3 right-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-purple-400/15 sm:bg-purple-400/20 dark:bg-purple-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-60 sm:opacity-70 animate-blob animation-delay-[2s]"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-48 h-48 sm:w-96 sm:h-96 bg-indigo-400/15 sm:bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-60 sm:opacity-70 animate-blob animation-delay-[4s]"></div>
       </div>
 
-      {/* Theme Toggle */}
-      <div className="absolute top-6 right-6 z-20">
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)]">
         <ThemeToggle />
       </div>
 
-      <div className="container mx-auto px-4 py-8 lg:py-12 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center max-w-6xl mx-auto">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-12 relative z-10 w-full max-w-lg lg:max-w-6xl">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center max-w-6xl mx-auto">
           {/* Left Side - Branding & Benefits */}
           <div className="hidden lg:block space-y-6 text-center lg:text-left py-4">
             <div className="space-y-3">
@@ -228,9 +227,9 @@ function RegisterForm() {
           </div>
 
           {/* Right Side - Sign Up Form */}
-          <div className="w-full max-w-lg mx-auto lg:mx-0 py-4 px-2 lg:px-0">
-            <Card className="border-2 shadow-2xl bg-card/95 dark:bg-card/90 backdrop-blur-xl card-hover animate-in fade-in slide-in-from-right duration-700">
-              <CardHeader className="space-y-2 text-center pb-6 px-6 pt-6">
+          <div className="w-full max-w-lg mx-auto lg:mx-0 py-2 sm:py-4 px-0 sm:px-2 lg:px-0">
+            <Card className="border border-border/50 sm:border-2 shadow-lg sm:shadow-2xl bg-card/95 dark:bg-card/90 backdrop-blur-xl rounded-xl sm:rounded-2xl px-4 py-5 sm:p-6">
+              <CardHeader className="space-y-2 text-center pb-4 sm:pb-6 px-0 sm:px-6 pt-4 sm:pt-6">
                 <div className="flex items-center justify-center gap-2 mb-2 lg:hidden">
                   <div className="relative group">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg blur-lg opacity-50 group-hover:opacity-70 transition-opacity"></div>
@@ -250,8 +249,8 @@ function RegisterForm() {
                 </CardDescription>
               </CardHeader>
               
-              <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-3 px-6 pb-6">
+                <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-3 sm:space-y-3 px-0 sm:px-6 pb-4 sm:pb-6">
                   <div className="space-y-2.5">
                     <Label htmlFor="name" className="flex items-center gap-2 text-sm font-medium">
                       <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -408,7 +407,7 @@ function RegisterForm() {
                   </div>
                 </CardContent>
                 
-                <CardFooter className="flex flex-col space-y-3 pt-2 pb-6 px-6">
+                <CardFooter className="flex flex-col space-y-3 pt-2 pb-5 sm:pb-6 px-0 sm:px-6">
                   <Button 
                     type="submit" 
                     className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 group" 

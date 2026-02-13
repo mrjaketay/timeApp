@@ -33,22 +33,23 @@ export function Topbar({ user, onMenuClick }: TopbarProps) {
     .slice(0, 2) || user.email[0].toUpperCase();
 
   return (
-    <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b border-border glass-effect">
-      <div className="flex items-center justify-between h-16 px-4 md:px-6">
-        <div className="flex items-center space-x-4 flex-1">
+    <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b border-border glass-effect pl-[env(safe-area-inset-left)]">
+      <div className="flex items-center justify-between h-14 sm:h-16 px-3 sm:px-4 md:px-6 gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden shrink-0 h-10 w-10"
             onClick={onMenuClick}
+            aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex items-center flex-1 max-w-lg">
+          <div className="flex-1 min-w-0 max-w-lg">
             <SearchBarWithSuggestions />
           </div>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

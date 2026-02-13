@@ -113,21 +113,21 @@ function LoginForm() {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
-      {/* Animated Background Elements */}
+    <div className="min-h-screen min-h-[100dvh] flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
+      {/* Background: subtle on mobile, fuller on desktop */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-400/20 dark:bg-blue-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-purple-400/20 dark:bg-purple-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-[2s]"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-[4s]"></div>
+        <div className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-blue-400/15 sm:bg-blue-400/20 dark:bg-blue-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-60 sm:opacity-70 animate-blob"></div>
+        <div className="absolute top-1/3 right-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-purple-400/15 sm:bg-purple-400/20 dark:bg-purple-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-60 sm:opacity-70 animate-blob animation-delay-[2s]"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-48 h-48 sm:w-96 sm:h-96 bg-indigo-400/15 sm:bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full mix-blend-multiply filter blur-xl opacity-60 sm:opacity-70 animate-blob animation-delay-[4s]"></div>
       </div>
 
-      {/* Theme Toggle */}
-      <div className="absolute top-6 right-6 z-20">
+      {/* Theme Toggle - safe area aware */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)]">
         <ThemeToggle />
       </div>
 
-      <div className="container mx-auto px-4 py-8 lg:py-12 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center max-w-6xl mx-auto">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-12 relative z-10 w-full max-w-lg lg:max-w-6xl">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center max-w-6xl mx-auto">
           {/* Left Side - Branding & Features */}
           <div className="hidden lg:block space-y-6 text-center lg:text-left py-4">
             <div className="space-y-3">
@@ -185,9 +185,9 @@ function LoginForm() {
           </div>
 
           {/* Right Side - Login Form */}
-          <div className="w-full max-w-md mx-auto lg:mx-0 py-4">
-            <Card className="border-2 shadow-2xl bg-card/80 backdrop-blur-xl card-hover">
-              <CardHeader className="space-y-2 text-center pb-4">
+          <div className="w-full max-w-md mx-auto lg:mx-0 py-2 sm:py-4">
+            <Card className="border border-border/50 sm:border-2 shadow-lg sm:shadow-2xl bg-card/90 sm:bg-card/80 backdrop-blur-xl rounded-xl sm:rounded-2xl px-4 py-5 sm:p-6 sm:px-6">
+              <CardHeader className="space-y-2 text-center pb-3 sm:pb-4 px-0 sm:px-6">
                 <div className="flex items-center justify-center gap-2 mb-2 lg:hidden">
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg blur-lg opacity-50"></div>
@@ -206,7 +206,7 @@ function LoginForm() {
               </CardHeader>
               
               <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 sm:space-y-4 px-0 sm:px-6 pb-4 sm:pb-6">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="flex items-center gap-2 text-sm">
                       <Mail className="h-4 w-4" />
@@ -254,7 +254,7 @@ function LoginForm() {
                   </div>
                 </CardContent>
                 
-                <CardFooter className="flex flex-col space-y-3 pt-4">
+                <CardFooter className="flex flex-col space-y-3 pt-3 sm:pt-4 px-0 sm:px-6 pb-4 sm:pb-6">
                   <Button 
                     type="submit" 
                     className="w-full h-11 text-sm bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all" 
@@ -270,14 +270,14 @@ function LoginForm() {
                     )}
                   </Button>
                   
-                  <div className="text-sm text-center space-y-2">
+                  <div className="text-sm text-center space-y-1.5 sm:space-y-2">
                     <div className="text-muted-foreground">
                       Don&apos;t have an account?{" "}
                       <Link href="/register" className="text-primary hover:underline font-medium">
                         Sign up
                       </Link>
                     </div>
-                    <div className="text-muted-foreground">
+                    <div className="text-muted-foreground hidden sm:block">
                       Interested in our pricing?{" "}
                       <Link href="/pricing" className="text-primary hover:underline font-medium">
                         View Plans

@@ -153,12 +153,12 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="space-y-6 lg:space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-5 sm:space-y-6 lg:space-y-8 animate-in fade-in duration-500">
       <ProfileCompletionBanner />
       <div className="flex items-start justify-between">
         <div>
-          <div className="flex items-baseline gap-3 mb-2">
-            <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+          <div className="flex items-baseline gap-3 mb-1 sm:mb-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
               Dashboard
             </h1>
           </div>
@@ -166,7 +166,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="card-hover border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50/50 via-white to-white dark:from-blue-950/20 dark:via-card dark:to-card group relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
@@ -224,10 +224,10 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="bg-gradient-to-br from-white/80 to-white dark:from-card/80 dark:to-card backdrop-blur-sm">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+        <Card className="bg-gradient-to-br from-white/80 to-white dark:from-card/80 dark:to-card backdrop-blur-sm overflow-hidden">
+          <CardHeader className="border-b border-border/50 px-4 sm:px-6 py-4">
+            <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-primary/10">
                 <Clock className="h-4 w-4 text-primary" />
               </div>
