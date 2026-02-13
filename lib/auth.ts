@@ -73,9 +73,11 @@ function getAuthOptions(): NextAuthOptions {
 
           const email = credentials.email.toLowerCase().trim();
 
-          // Optimize: Only fetch essential data for login
-          const user = await prisma.user.findUnique({
-            where: { email },
+          // findFirst with mode: 'insensitive' so login works regardless of email casing in DB (PostgreSQL is case-sensitive)
+          const user = await prisma.user.findFirst({
+            where: {
+              email: { equals: email, mode: "insensitive" },
+            },
             select: {
               id: true,
               email: true,
@@ -132,8 +134,10 @@ function getAuthOptions(): NextAuthOptions {
             companyMemberships,
           };
         } catch (error) {
-          console.error("[Auth] Error during authentication:", error instanceof Error ? error.message : error);
-          // Return null to show login failed, don't expose database errors
+          const message = error instanceof Error ? error.message : String(error);
+          const stack = error instanceof Error ? error.stack : undefined;
+          console.error("[Auth] Error during authentication:", message, stack ? "\n" + stack : "");
+          // Return null to show login failed; don't expose DB details to client
           return null;
         }
       },
