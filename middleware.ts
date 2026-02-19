@@ -18,8 +18,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow landing page, login, register, pricing, and onboarding pages (onboarding has its own auth check)
-  if (path === "/" || path === "/login" || path === "/register" || path === "/pricing" || path === "/onboarding") {
+  // Allow landing page, login, register, pricing, onboarding, and tap (dedicated clock-in page, no auth)
+  if (path === "/" || path === "/login" || path === "/register" || path === "/pricing" || path === "/onboarding" || path === "/tap") {
     return NextResponse.next();
   }
 
