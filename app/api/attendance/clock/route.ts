@@ -112,14 +112,7 @@ export async function POST(req: NextRequest) {
     // If event type not provided, determine from last event
     if (!eventType) {
       if (lastEvent && lastEvent.eventType === "CLOCK_IN") {
-        // Check if it's a double clock in (within 5 minutes)
-        const timeDiff = Date.now() - lastEvent.capturedAt.getTime();
-        if (timeDiff < 5 * 60 * 1000) {
-          return NextResponse.json(
-            { error: "Please wait before clocking in again" },
-            { status: 400 }
-          );
-        }
+        // Next tap is clock out — allow immediately (no minimum interval)
         eventType = "CLOCK_OUT";
       } else if (lastEvent && lastEvent.eventType === "CLOCK_OUT") {
         eventType = "CLOCK_IN";
@@ -127,12 +120,19 @@ export async function POST(req: NextRequest) {
         eventType = "CLOCK_IN"; // Default to clock in if no previous event
       }
     } else {
-      // Validate that event type matches expected state
+      // Validate that event type matches expected state (2-minute cooldown before clocking in again)
+      const CLOCK_IN_COOLDOWN_MS = 2 * 60 * 1000;
       if (eventType === "CLOCK_IN" && lastEvent && lastEvent.eventType === "CLOCK_IN") {
         const timeDiff = Date.now() - lastEvent.capturedAt.getTime();
-        if (timeDiff < 5 * 60 * 1000) {
+        if (timeDiff < CLOCK_IN_COOLDOWN_MS) {
+          const waitMinutesRemaining = Math.ceil((CLOCK_IN_COOLDOWN_MS - timeDiff) / (60 * 1000));
           return NextResponse.json(
-            { error: "Already clocked in. Please clock out first." },
+            {
+              error: "Already clocked in. Please clock out first or wait before clocking in again.",
+              code: "ALREADY_CLOCKED_IN",
+              employeeName: employeeProfile.name ?? undefined,
+              waitMinutesRemaining,
+            },
             { status: 400 }
           );
         }

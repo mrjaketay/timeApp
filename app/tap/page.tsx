@@ -173,7 +173,15 @@ function TapDedicatedPage() {
         });
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Something went wrong.");
+          if (data.code === "ALREADY_CLOCKED_IN" && (data.employeeName != null || data.waitMinutesRemaining != null)) {
+            const name = data.employeeName || "This user";
+            const mins = data.waitMinutesRemaining ?? 2;
+            setError(
+              `${name} is already clocked in. Please wait ${mins} ${mins === 1 ? "minute" : "minutes"} before scanning again.`
+            );
+          } else {
+            setError(data.error || "Something went wrong.");
+          }
           return;
         }
         setResult({

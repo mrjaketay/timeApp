@@ -188,7 +188,14 @@ export default function ClockPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to clock in/out");
+        let message = data.error || "Failed to clock in/out";
+        if (data.code === "ALREADY_CLOCKED_IN" && (data.employeeName != null || data.waitMinutesRemaining != null)) {
+          const name = data.employeeName || "You";
+          const mins = data.waitMinutesRemaining ?? 2;
+          const verb = name === "You" ? "are" : "is";
+          message = `${name} ${verb} already clocked in. Please wait ${mins} ${mins === 1 ? "minute" : "minutes"} before clocking in again.`;
+        }
+        throw new Error(message);
       }
 
       setLastEvent({ type: data.eventType, time: new Date() });
