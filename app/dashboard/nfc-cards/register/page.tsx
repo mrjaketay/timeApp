@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Radio, Loader2, Copy, Check } from "lucide-react";
 import Link from "next/link";
 import { registerNFCCard } from "@/app/actions/nfc";
+import { normalizeNfcUid } from "@/lib/nfc-uid";
 
 interface Employee {
   id: string;
@@ -42,7 +43,7 @@ export default function RegisterNFCCardPage() {
 
   const tapUrl =
     typeof window !== "undefined" && registeredUid
-      ? `${window.location.origin}/tap?card=${encodeURIComponent(registeredUid)}`
+      ? `${window.location.origin}/tap?card=${encodeURIComponent(normalizeNfcUid(registeredUid))}`
       : "";
 
   useEffect(() => {
@@ -159,7 +160,7 @@ export default function RegisterNFCCardPage() {
           title: "Success",
           description: "NFC card registered. Write the tap URL to your card.",
         });
-        setRegisteredUid(formData.uid.trim());
+        setRegisteredUid(normalizeNfcUid(formData.uid.trim()));
       }
     } catch (error) {
       toast({
@@ -199,7 +200,7 @@ export default function RegisterNFCCardPage() {
           <CardHeader>
             <CardTitle>Card registered</CardTitle>
             <CardDescription>
-              Write this URL to your NFC tag so a tap opens it and clocks the employee in or out.
+              Write this URL to your NFC tag with NFC Tools (Write → Add record → URL). Then when the employee taps the card on their phone (e.g. iPhone), the link opens and they are clocked in or out.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -211,7 +212,7 @@ export default function RegisterNFCCardPage() {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Use an NFC write app (e.g. NFC Tools) to write this URL to the physical card. After that, tapping the card on a phone will open this link and clock the employee in or out (location required).
+              In NFC Tools: Write → Add a record → URL → paste the URL above. On iPhone, tapping the card will open this link in Safari and clock the employee in or out (location required).
             </p>
             <div className="flex gap-2 pt-2">
               <Button asChild>
@@ -252,17 +253,17 @@ export default function RegisterNFCCardPage() {
         <CardHeader>
           <CardTitle>Card Information</CardTitle>
           <CardDescription>
-            Scan or manually enter the NFC card UID and assign it to an employee
+            Add the card serial number from NFC Tools and assign it to an employee. On iPhone, enter the serial manually (NFC scan in browser is not supported).
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="uid">Card UID</Label>
+              <Label htmlFor="uid">Card serial number (from NFC Tools)</Label>
               <div className="flex space-x-2">
                 <Input
                   id="uid"
-                  placeholder="Enter or scan card UID"
+                  placeholder="e.g. 04:A1:B2:C3 or 04a1b2c3"
                   value={formData.uid}
                   onChange={(e) => setFormData({ ...formData, uid: e.target.value })}
                   required
@@ -291,7 +292,7 @@ export default function RegisterNFCCardPage() {
               </div>
               {!nfcSupported && (
                 <p className="text-xs text-muted-foreground">
-                  NFC scanning is not supported on your device. Please enter the UID manually.
+                  NFC scanning is not supported on your device (e.g. iPhone). Enter the serial number from NFC Tools manually.
                 </p>
               )}
             </div>

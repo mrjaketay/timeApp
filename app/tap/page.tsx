@@ -264,6 +264,9 @@ function TapDedicatedPage() {
             Clock In / Out
           </h1>
           <p className="text-sm text-muted-foreground">Tap your card or enter your code. Anyone can use this page.</p>
+          <p className="text-xs text-muted-foreground">
+            On iPhone: write the tap URL to your card with NFC Tools, then tap the card — the link opens and clocks you in/out. The &quot;Tap NFC card&quot; button does not work on iPhone.
+          </p>
         </div>
 
         {/* Location */}

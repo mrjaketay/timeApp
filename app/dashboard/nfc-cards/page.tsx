@@ -70,7 +70,7 @@ export default async function NFCCardsPage({
         <CardHeader>
           <CardTitle>Registered Cards</CardTitle>
           <CardDescription>
-            {nfcCards.length} {nfcCards.length === 1 ? "card" : "cards"} registered. Use &quot;Copy tap link&quot; and write that URL to the physical NFC tag (e.g. with NFC Tools); then tapping the card on a phone will open the link and clock the employee in or out.
+            {nfcCards.length} {nfcCards.length === 1 ? "card" : "cards"} registered. Each card is linked to an employee by its serial number (from NFC Tools). Use &quot;Copy tap link&quot; and write that URL to the physical tag in NFC Tools; on iPhone, tapping the card then opens the link and clocks the employee in or out.
           </CardDescription>
         </CardHeader>
         <CardContent>

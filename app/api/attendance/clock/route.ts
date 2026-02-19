@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { normalizeNfcUid } from "@/lib/nfc-uid";
 
 const clockSchema = z.object({
   nfcCardId: z.string().optional(), // NFC card UID or employee code
@@ -33,11 +34,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find employee by NFC card UID or employee code
+    // Find employee by NFC card UID (serial) or employee code
     let employeeProfile = null;
     let nfcCard = null;
+    const normalizedNfcId = normalizeNfcUid(validated.nfcCardId);
 
-    // Try to find by NFC card UID first
+    // Try to find by NFC card UID first (exact then normalized, for different serial formats)
     nfcCard = await prisma.nFCCard.findUnique({
       where: { uid: validated.nfcCardId },
       include: {
@@ -48,6 +50,18 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+    if (!nfcCard) {
+      nfcCard = await prisma.nFCCard.findUnique({
+        where: { uid: normalizedNfcId },
+        include: {
+          employeeProfile: {
+            include: {
+              company: true,
+            },
+          },
+        },
+      });
+    }
 
     if (nfcCard && nfcCard.isActive) {
       employeeProfile = nfcCard.employeeProfile;

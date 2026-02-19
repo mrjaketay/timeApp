@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { getAuthOptionsLazy } from "@/lib/auth";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { normalizeNfcUid } from "@/lib/nfc-uid";
 
 const registerNFCCardSchema = z.object({
   uid: z.string().min(1, "UID is required"),
@@ -29,10 +30,11 @@ export async function registerNFCCard(data: z.infer<typeof registerNFCCardSchema
 
     // Validate input
     const validated = registerNFCCardSchema.parse(data);
+    const normalizedUid = normalizeNfcUid(validated.uid);
 
-    // Check if card already exists
+    // Check if card already exists (by normalized UID so 04:A1 and 04a1 are treated as same)
     const existingCard = await prisma.nFCCard.findUnique({
-      where: { uid: validated.uid },
+      where: { uid: normalizedUid },
     });
 
     if (existingCard) {
@@ -52,10 +54,10 @@ export async function registerNFCCard(data: z.infer<typeof registerNFCCardSchema
       return { error: "Employee not found or is not active" };
     }
 
-    // Create the NFC card
+    // Create the NFC card (store normalized UID so tap URL and lookups match)
     await prisma.nFCCard.create({
       data: {
-        uid: validated.uid,
+        uid: normalizedUid,
         employeeProfileId: validated.employeeProfileId,
         companyId,
         registeredBy: session.user.id,
