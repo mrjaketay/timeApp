@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,7 +64,7 @@ function TapWithCard({ cardUid }: { cardUid: string }) {
           setMessage("Location access is required. Please allow location and try again.");
         }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
     );
 
     return () => {
@@ -77,6 +77,7 @@ function TapWithCard({ cardUid }: { cardUid: string }) {
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-indigo-950">
         <div className="animate-pulse text-muted-foreground">Getting location and clocking you in/out…</div>
         <p className="text-sm text-muted-foreground mt-2">Please allow location access if prompted.</p>
+        <p className="text-xs text-muted-foreground mt-4 max-w-xs text-center">Using a recent location when possible so this stays quick.</p>
       </div>
     );
   }
@@ -139,7 +140,7 @@ function TapDedicatedPage() {
         );
         setIsGettingLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
     );
   }, []);
 
@@ -204,15 +205,8 @@ function TapDedicatedPage() {
     return raw.trim();
   }, []);
 
-  const scanNFC = useCallback(() => {
-    if (!nfcSupported) {
-      setError("NFC is not supported on this device. Use the code field instead.");
-      return;
-    }
-    if (!location) {
-      setError("Please allow location first.");
-      return;
-    }
+  const startNfcScan = useCallback(() => {
+    if (!nfcSupported || !location) return;
     setError(null);
     setIsScanning(true);
     try {
@@ -223,20 +217,18 @@ function TapDedicatedPage() {
         const record = message.records[0];
         if (!record?.data) {
           setError("No data on card. Use a card with the tap URL or clock code written.");
-          setIsScanning(false);
           return;
         }
         const nfcId = nfcPayloadToCardId(record);
         if (!nfcId) {
           setError("Could not read card ID. Use a card with the tap URL or enter your code.");
-          setIsScanning(false);
           return;
         }
         await clock(nfcId);
-        setIsScanning(false);
+        // Reader keeps listening; next scan will clock the next person
       });
       reader.addEventListener("error", () => {
-        setError("Could not read NFC card. Try again.");
+        setError("Could not read NFC card. Hold card again.");
         setIsScanning(false);
       });
     } catch {
@@ -244,6 +236,14 @@ function TapDedicatedPage() {
       setIsScanning(false);
     }
   }, [nfcSupported, location, clock, nfcPayloadToCardId]);
+
+  const nfcStartedRef = useRef(false);
+  // Auto-start NFC scan as soon as location is ready (no button)
+  useEffect(() => {
+    if (!nfcSupported || !location || nfcStartedRef.current) return;
+    nfcStartedRef.current = true;
+    startNfcScan();
+  }, [nfcSupported, location, startNfcScan]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,9 +263,10 @@ function TapDedicatedPage() {
             <Clock className="h-7 w-7" />
             Clock In / Out
           </h1>
-          <p className="text-sm text-muted-foreground">Tap your card or enter your code. Anyone can use this page.</p>
-          <p className="text-xs text-muted-foreground">
-            On iPhone: write the tap URL to your card with NFC Tools, then tap the card — the link opens and clocks you in/out. The &quot;Tap NFC card&quot; button does not work on iPhone.
+          <p className="text-sm text-muted-foreground">
+            {nfcSupported
+              ? "Hold your NFC card to the back of the phone to clock in or out."
+              : "Enter your clock code below, or open the tap link from your card (iPhone)."}
           </p>
         </div>
 
@@ -287,37 +288,44 @@ function TapDedicatedPage() {
           {locationError && <p className="text-sm text-destructive">{locationError}</p>}
         </div>
 
+        {/* NFC: auto-scanning when location ready */}
+        {nfcSupported && location && isScanning && (
+          <p className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+            <Radio className="h-4 w-4 animate-pulse" />
+            Hold card to phone to clock in/out
+          </p>
+        )}
+
         {/* Success / Error result */}
         {result && (
           <div className="rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4 text-center">
             <p className="font-medium text-green-800 dark:text-green-200">
               {result.type === "CLOCK_IN" ? "Clocked in" : "Clocked out"} — {result.name}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">Next person can tap or enter code.</p>
+            <p className="text-sm text-muted-foreground mt-1">Next person can scan a card or enter a code.</p>
           </div>
         )}
         {error && (
-          <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-            {error}
+          <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive space-y-2">
+            <p>{error}</p>
+            {nfcSupported && location && !isScanning && (
+              <button
+                type="button"
+                className="text-primary underline text-xs"
+                onClick={() => {
+                  nfcStartedRef.current = false;
+                  startNfcScan();
+                }}
+              >
+                Scan again
+              </button>
+            )}
           </div>
         )}
 
-        {/* NFC */}
-        {nfcSupported && (
-          <Button
-            className="w-full"
-            size="lg"
-            onClick={scanNFC}
-            disabled={!location || isScanning || isClocking}
-          >
-            <Radio className="mr-2 h-4 w-4" />
-            {isScanning ? "Hold your card…" : "Tap NFC card"}
-          </Button>
-        )}
-
-        {/* Manual code */}
+        {/* Manual code fallback */}
         <form onSubmit={handleManualSubmit} className="space-y-2">
-          <Label htmlFor="tap-code">Or enter your clock code</Label>
+          <Label htmlFor="tap-code">{nfcSupported ? "Or enter your clock code" : "Enter your clock code"}</Label>
           <div className="flex gap-2">
             <Input
               id="tap-code"

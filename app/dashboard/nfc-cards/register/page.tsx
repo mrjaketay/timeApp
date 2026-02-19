@@ -212,8 +212,17 @@ export default function RegisterNFCCardPage() {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              In NFC Tools: Write → Add a record → URL → paste the URL above. On iPhone, tapping the card will open this link in Safari and clock the employee in or out (location required).
+              In NFC Tools: Write → Add a record → <strong>URL</strong> (not Text) → paste the URL above. On iPhone, tapping the card will open this link in Safari and clock the employee in or out (location required).
             </p>
+            <details className="text-sm text-muted-foreground border rounded-lg p-3 bg-muted/30">
+              <summary className="cursor-pointer font-medium">If tapping the card does nothing</summary>
+              <ul className="mt-2 list-disc list-inside space-y-1">
+                <li>In NFC Tools, write the link as a <strong>URL</strong> record (Write → Add record → URL), not as Text.</li>
+                <li>iPhone: keep the screen on (or unlocked), hold the top-back of the phone to the card for 1–2 seconds; a notification may appear — tap it to open in Safari.</li>
+                <li>Ensure NFC is enabled (Settings → NFC / Control Center).</li>
+                <li>If it still does nothing, open the link once in Safari and allow location; then try tapping the card again.</li>
+              </ul>
+            </details>
             <div className="flex gap-2 pt-2">
               <Button asChild>
                 <Link href="/dashboard/nfc-cards">Back to NFC cards</Link>
