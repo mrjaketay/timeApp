@@ -192,7 +192,9 @@ function TapDedicatedPage() {
 
   /** Extract card UID from NFC payload: if it's a tap URL (?card=...), use the param; else use raw payload. */
   const nfcPayloadToCardId = useCallback((record: { data: BufferSource; recordType?: string }): string => {
-    const raw = new TextDecoder().decode(record.data);
+    let raw = new TextDecoder().decode(record.data);
+    // NDEF URI records may have a leading prefix byte (0x00-0x24); strip non-printable leading chars
+    raw = raw.replace(/^[\x00-\x1f\x7f]+/, "");
     // Card may have the tap URL written on it (e.g. https://domain.com/tap?card=UID)
     const cardMatch = raw.match(/[?&]card=([^&\s#]+)/i) ?? raw.match(/card=([^&\s#]+)/i);
     if (cardMatch) {
@@ -205,14 +207,15 @@ function TapDedicatedPage() {
     return raw.trim();
   }, []);
 
-  const startNfcScan = useCallback(() => {
+  const startNfcScan = useCallback(async () => {
     if (!nfcSupported || !location) return;
     setError(null);
+    setResult(null);
     setIsScanning(true);
     try {
       // @ts-expect-error NDEFReader not in types
       const reader = new NDEFReader();
-      reader.scan();
+      await reader.scan();
       reader.addEventListener("reading", async ({ message }: { message: { records: Array<{ data: BufferSource; recordType?: string }> } }) => {
         const record = message.records[0];
         if (!record?.data) {
@@ -224,6 +227,7 @@ function TapDedicatedPage() {
           setError("Could not read card ID. Use a card with the tap URL or enter your code.");
           return;
         }
+        setError(null);
         await clock(nfcId);
         // Reader keeps listening; next scan will clock the next person
       });
@@ -231,8 +235,8 @@ function TapDedicatedPage() {
         setError("Could not read NFC card. Hold card again.");
         setIsScanning(false);
       });
-    } catch {
-      setError("Failed to start NFC. Use the code field instead.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start NFC. Use the code field or allow NFC permission.");
       setIsScanning(false);
     }
   }, [nfcSupported, location, clock, nfcPayloadToCardId]);
