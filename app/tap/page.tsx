@@ -38,10 +38,23 @@ function TapWithCard({ cardUid }: { cardUid: string }) {
               deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
             }),
           });
-          const data = await res.json();
+          let data: { error?: string; code?: string; employeeName?: string | null; waitMinutesRemaining?: number; eventType?: string } = {};
+          try {
+            data = await res.json();
+          } catch {
+            setStatus("error");
+            setMessage(res.ok ? "Invalid response." : "Server error. Please try again.");
+            return;
+          }
           if (!res.ok) {
             setStatus("error");
-            setMessage(data.error || "Something went wrong.");
+            if (data.code === "ALREADY_CLOCKED_IN") {
+              const name = data.employeeName ?? "This user";
+              const mins = data.waitMinutesRemaining ?? 2;
+              setMessage(`${name} is already clocked in. Please wait ${mins} ${mins === 1 ? "minute" : "minutes"} before scanning again.`);
+            } else {
+              setMessage(typeof data.error === "string" ? data.error : "Could not clock in/out. Please try again.");
+            }
             return;
           }
           setStatus("success");
@@ -171,21 +184,27 @@ function TapDedicatedPage() {
             deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
           }),
         });
-        const data = await res.json();
+        let data: { error?: string; code?: string; employeeName?: string | null; waitMinutesRemaining?: number; eventType?: string } = {};
+        try {
+          data = await res.json();
+        } catch {
+          setError(res.ok ? "Invalid response." : "Server error. Please try again.");
+          return;
+        }
         if (!res.ok) {
-          if (data.code === "ALREADY_CLOCKED_IN" && (data.employeeName != null || data.waitMinutesRemaining != null)) {
-            const name = data.employeeName || "This user";
+          if (data.code === "ALREADY_CLOCKED_IN") {
+            const name = data.employeeName ?? "This user";
             const mins = data.waitMinutesRemaining ?? 2;
             setError(
               `${name} is already clocked in. Please wait ${mins} ${mins === 1 ? "minute" : "minutes"} before scanning again.`
             );
           } else {
-            setError(data.error || "Something went wrong.");
+            setError(typeof data.error === "string" ? data.error : "Could not clock in/out. Please try again.");
           }
           return;
         }
         setResult({
-          type: data.eventType,
+          type: data.eventType ?? "CLOCK_IN",
           name: data.employeeName || "You",
         });
         setManualCode("");
