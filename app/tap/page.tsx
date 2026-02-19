@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -262,6 +262,11 @@ function TapDedicatedPage() {
               ? "Tap once to start, then hold your card to the phone to clock in or out."
               : "Enter your clock code below, or open the tap link from your card (iPhone)."}
           </p>
+          {nfcSupported && (
+            <p className="text-xs text-muted-foreground">
+              Your card must have the tap URL or serial written to it (NFC Tools → Write → URL or Text). Get the URL from Dashboard → NFC Cards after registering the card.
+            </p>
+          )}
         </div>
 
         {/* Location */}
