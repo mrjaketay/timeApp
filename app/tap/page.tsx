@@ -189,6 +189,21 @@ function TapDedicatedPage() {
     [location, getLocation]
   );
 
+  /** Extract card UID from NFC payload: if it's a tap URL (?card=...), use the param; else use raw payload. */
+  const nfcPayloadToCardId = useCallback((record: { data: BufferSource; recordType?: string }): string => {
+    const raw = new TextDecoder().decode(record.data);
+    // Card may have the tap URL written on it (e.g. https://domain.com/tap?card=UID)
+    const cardMatch = raw.match(/[?&]card=([^&\s#]+)/i) ?? raw.match(/card=([^&\s#]+)/i);
+    if (cardMatch) {
+      try {
+        return decodeURIComponent(cardMatch[1].trim());
+      } catch {
+        return cardMatch[1].trim();
+      }
+    }
+    return raw.trim();
+  }, []);
+
   const scanNFC = useCallback(() => {
     if (!nfcSupported) {
       setError("NFC is not supported on this device. Use the code field instead.");
@@ -204,9 +219,19 @@ function TapDedicatedPage() {
       // @ts-expect-error NDEFReader not in types
       const reader = new NDEFReader();
       reader.scan();
-      reader.addEventListener("reading", async ({ message }: { message: { records: Array<{ data: BufferSource }> } }) => {
+      reader.addEventListener("reading", async ({ message }: { message: { records: Array<{ data: BufferSource; recordType?: string }> } }) => {
         const record = message.records[0];
-        const nfcId = new TextDecoder().decode(record.data);
+        if (!record?.data) {
+          setError("No data on card. Use a card with the tap URL or clock code written.");
+          setIsScanning(false);
+          return;
+        }
+        const nfcId = nfcPayloadToCardId(record);
+        if (!nfcId) {
+          setError("Could not read card ID. Use a card with the tap URL or enter your code.");
+          setIsScanning(false);
+          return;
+        }
         await clock(nfcId);
         setIsScanning(false);
       });
@@ -218,7 +243,7 @@ function TapDedicatedPage() {
       setError("Failed to start NFC. Use the code field instead.");
       setIsScanning(false);
     }
-  }, [nfcSupported, location, clock]);
+  }, [nfcSupported, location, clock, nfcPayloadToCardId]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
