@@ -4,6 +4,8 @@ import { getAuthOptionsLazy } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseISO } from "date-fns";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const authOptions = getAuthOptionsLazy();
