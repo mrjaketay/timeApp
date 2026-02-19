@@ -288,6 +288,9 @@ export default async function DashboardPage() {
     );
   } catch (error) {
     console.error("Dashboard page error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    const isConnectionError =
+      /max clients|MaxClients|connection|pool|ECONNREFUSED|connect/i.test(message);
     return (
       <div className="space-y-6">
         <div>
@@ -295,8 +298,20 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground">
             An error occurred while loading the dashboard. Please try again.
           </p>
-          {error instanceof Error && (
-            <p className="text-sm text-red-600 mt-2">{error.message}</p>
+          <p className="text-sm text-red-600 dark:text-red-400 mt-2 font-mono break-words">
+            {message}
+          </p>
+          {isConnectionError && (
+            <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                Database connection limit
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
+                Use the <strong>pooled</strong> connection URL (e.g. Supabase port 6543 with{" "}
+                <code className="text-xs">?pgbouncer=true</code>) and set it as{" "}
+                <code className="text-xs">DATABASE_URL</code>. See CONNECTION_POOL.md in the project.
+              </p>
+            </div>
           )}
         </div>
       </div>
