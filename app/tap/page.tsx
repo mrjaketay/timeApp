@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -237,13 +237,7 @@ function TapDedicatedPage() {
     }
   }, [nfcSupported, location, clock, nfcPayloadToCardId]);
 
-  const nfcStartedRef = useRef(false);
-  // Auto-start NFC scan as soon as location is ready (no button)
-  useEffect(() => {
-    if (!nfcSupported || !location || nfcStartedRef.current) return;
-    nfcStartedRef.current = true;
-    startNfcScan();
-  }, [nfcSupported, location, startNfcScan]);
+  // Chrome requires a user gesture to start NFC; we can't auto-start in useEffect
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,7 +259,7 @@ function TapDedicatedPage() {
           </h1>
           <p className="text-sm text-muted-foreground">
             {nfcSupported
-              ? "Hold your NFC card to the back of the phone to clock in or out."
+              ? "Tap once to start, then hold your card to the phone to clock in or out."
               : "Enter your clock code below, or open the tap link from your card (iPhone)."}
           </p>
         </div>
@@ -288,12 +282,26 @@ function TapDedicatedPage() {
           {locationError && <p className="text-sm text-destructive">{locationError}</p>}
         </div>
 
-        {/* NFC: auto-scanning when location ready */}
-        {nfcSupported && location && isScanning && (
-          <p className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-            <Radio className="h-4 w-4 animate-pulse" />
-            Hold card to phone to clock in/out
-          </p>
+        {/* NFC: one tap to start (Chrome requires user gesture), then hold card */}
+        {nfcSupported && location && (
+          <>
+            {!isScanning ? (
+              <Button
+                className="w-full h-12"
+                size="lg"
+                onClick={() => startNfcScan()}
+                disabled={isClocking}
+              >
+                <Radio className="mr-2 h-4 w-4" />
+                Tap to start, then hold card to phone
+              </Button>
+            ) : (
+              <p className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <Radio className="h-4 w-4 animate-pulse" />
+                Hold card to phone to clock in/out
+              </p>
+            )}
+          </>
         )}
 
         {/* Success / Error result */}
@@ -312,12 +320,9 @@ function TapDedicatedPage() {
               <button
                 type="button"
                 className="text-primary underline text-xs"
-                onClick={() => {
-                  nfcStartedRef.current = false;
-                  startNfcScan();
-                }}
+                onClick={() => startNfcScan()}
               >
-                Scan again
+                Try again
               </button>
             )}
           </div>
