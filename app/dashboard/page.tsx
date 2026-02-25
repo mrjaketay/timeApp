@@ -1,9 +1,10 @@
 import { getSession } from "@/lib/get-session";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { format } from "date-fns";
-import { Users, Clock, AlertCircle, Clock3 } from "lucide-react";
+import { Users, Clock, AlertCircle, Clock3, UserCheck, UserMinus } from "lucide-react";
 import { WelcomeMessage } from "@/components/welcome-message";
 import { ProfileCompletionBanner } from "@/components/profile-completion-banner";
 import { DashboardRefresh } from "@/components/dashboard-refresh";
@@ -134,6 +135,43 @@ export default async function DashboardPage() {
     }
   });
 
+  // Currently clocked in: latest clock-in per employee with no clock-out after it
+  const latestClockInMap = new Map<string, { id: string; capturedAt: Date }>();
+  clockIns.forEach((ci) => {
+    const existing = latestClockInMap.get(ci.employeeProfileId);
+    if (!existing || ci.capturedAt > existing.capturedAt) {
+      latestClockInMap.set(ci.employeeProfileId, { id: ci.id, capturedAt: ci.capturedAt });
+    }
+  });
+  const currentlyClockedInRaw: { employeeProfileId: string; eventId: string; clockedInAt: Date }[] = [];
+  latestClockInMap.forEach((clockIn, empId) => {
+    const co = clockOutMap.get(empId);
+    if (!co || co.capturedAt < clockIn.capturedAt) {
+      currentlyClockedInRaw.push({
+        employeeProfileId: empId,
+        eventId: clockIn.id,
+        clockedInAt: clockIn.capturedAt,
+      });
+    }
+  });
+
+  const clockedInIds = currentlyClockedInRaw.map((c) => c.employeeProfileId);
+  const clockedInProfiles =
+    clockedInIds.length > 0
+      ? await prisma.employeeProfile.findMany({
+          where: { id: { in: clockedInIds }, companyId },
+          select: { id: true, name: true, email: true },
+        })
+      : [];
+  const profileMap = new Map(clockedInProfiles.map((p) => [p.id, p]));
+  const currentlyClockedIn = currentlyClockedInRaw.map((c) => ({
+    ...c,
+    name: profileMap.get(c.employeeProfileId)?.name ?? profileMap.get(c.employeeProfileId)?.email ?? "Unknown",
+  }));
+
+  const now = new Date();
+  const maxBarHours = 10; // 10h = 100% bar width for display
+
   // Get recent activity - only fetch what we need
   const recentActivity = await prisma.attendanceEvent.findMany({
     where: { companyId },
@@ -226,6 +264,94 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {/* Currently clocked in + Recently clocked out */}
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+        <Card className="bg-gradient-to-br from-white/80 to-white dark:from-card/80 dark:to-card backdrop-blur-sm overflow-hidden">
+          <CardHeader className="border-b border-border/50 px-4 sm:px-6 py-4">
+            <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-green-500/10">
+                <UserCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+              Currently clocked in
+            </CardTitle>
+            <CardDescription className="mt-1">Time so far today — click for details</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              {currentlyClockedIn.length > 0 ? (
+                currentlyClockedIn.map((row) => {
+                  const elapsedMs = now.getTime() - row.clockedInAt.getTime();
+                  const elapsedHours = elapsedMs / (1000 * 60 * 60);
+                  const barPct = Math.min(100, (elapsedHours / maxBarHours) * 100);
+                  const h = Math.floor(elapsedHours);
+                  const m = Math.floor((elapsedHours - h) * 60);
+                  const timeLabel = h > 0 ? `${h}h ${m}m` : `${m}m`;
+                  return (
+                    <Link
+                      key={row.eventId}
+                      href={`/dashboard/attendance/${row.eventId}`}
+                      className="block p-3 rounded-lg hover:bg-muted/50 transition-colors border-l-2 border-l-green-500"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="font-medium text-sm truncate">{row.name}</span>
+                        <span className="text-sm font-mono font-semibold text-green-600 dark:text-green-400 shrink-0">
+                          {timeLabel}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-500 dark:from-green-600 dark:to-emerald-600 transition-all"
+                          style={{ width: `${barPct}%` }}
+                        />
+                      </div>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="text-center py-6 text-muted-foreground text-sm">No one clocked in right now</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-white/80 to-white dark:from-card/80 dark:to-card backdrop-blur-sm overflow-hidden">
+          <CardHeader className="border-b border-border/50 px-4 sm:px-6 py-4">
+            <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-blue-500/10">
+                <UserMinus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              Recently clocked out
+            </CardTitle>
+            <CardDescription className="mt-1">Latest clock-out events — click for details</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              {recentActivity.filter((e) => e.eventType === "CLOCK_OUT").slice(0, 5).length > 0 ? (
+                recentActivity
+                  .filter((e) => e.eventType === "CLOCK_OUT")
+                  .slice(0, 5)
+                  .map((event) => (
+                    <Link
+                      key={event.id}
+                      href={`/dashboard/attendance/${event.id}`}
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors border-l-2 border-l-blue-500"
+                    >
+                      <span className="font-medium text-sm truncate">
+                        {event.employeeProfile.name || event.employeeProfile.email || "Unknown"}
+                      </span>
+                      <span className="text-sm text-muted-foreground shrink-0">
+                        {format(event.capturedAt, "HH:mm")}
+                      </span>
+                    </Link>
+                  ))
+              ) : (
+                <div className="text-center py-6 text-muted-foreground text-sm">No recent clock-outs</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
         <Card className="bg-gradient-to-br from-white/80 to-white dark:from-card/80 dark:to-card backdrop-blur-sm overflow-hidden">
           <CardHeader className="border-b border-border/50 px-4 sm:px-6 py-4">
@@ -241,9 +367,10 @@ export default async function DashboardPage() {
             <div className="space-y-4">
               {recentActivity.length > 0 ? (
                 recentActivity.map((event, index) => (
-                  <div 
-                    key={event.id} 
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors border-l-2 border-l-transparent hover:border-l-primary animate-in fade-in slide-in-from-left-2"
+                  <Link
+                    key={event.id}
+                    href={`/dashboard/attendance/${event.id}`}
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors border-l-2 border-l-transparent hover:border-l-primary animate-in fade-in slide-in-from-left-2 block"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-center space-x-3">
@@ -275,7 +402,7 @@ export default async function DashboardPage() {
                         {format(event.capturedAt, "MMM d")}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="text-center py-8 text-muted-foreground">

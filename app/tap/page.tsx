@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ function getNfcNotSupportedMessage(): string {
 
 /** When ?card= is present: auto clock that card (backward compatibility). */
 function TapWithCard({ cardUid }: { cardUid: string }) {
+  const router = useRouter();
   const [status, setStatus] = useState<"loading" | "success" | "error" | "no-location">("loading");
   const [message, setMessage] = useState("");
   const [eventType, setEventType] = useState<string | null>(null);
@@ -112,6 +113,13 @@ function TapWithCard({ cardUid }: { cardUid: string }) {
     );
   }
 
+  // After success, redirect back to /tap so the next person can clock in/out
+  useEffect(() => {
+    if (status !== "success") return;
+    const id = setTimeout(() => router.replace("/tap"), 3500);
+    return () => clearTimeout(id);
+  }, [status, router]);
+
   if (status === "no-location" || status === "error") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-indigo-950">
@@ -135,6 +143,14 @@ function TapWithCard({ cardUid }: { cardUid: string }) {
       </div>
       <h1 className="text-2xl font-bold text-center text-green-800 dark:text-green-200">{eventType}!</h1>
       <p className="text-muted-foreground text-center mt-2">{message}</p>
+      <p className="text-sm text-muted-foreground mt-4">Returning to tap page…</p>
+      <button
+        type="button"
+        onClick={() => router.replace("/tap")}
+        className="mt-4 px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors"
+      >
+        Tap again
+      </button>
     </div>
   );
 }
