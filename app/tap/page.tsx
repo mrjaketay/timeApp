@@ -253,24 +253,32 @@ function TapDedicatedPage() {
     try {
       // @ts-expect-error NDEFReader not in types
       const reader = new NDEFReader();
-      await reader.scan();
+      // Timeout if scan never starts (e.g. NFC off, permission dismissed)
+      const scanPromise = reader.scan();
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("NFC didn't start. Check NFC is on in phone settings and allow permission, then tap the circle again.")), 15000)
+      );
+      await Promise.race([scanPromise, timeout]);
       reader.addEventListener("reading", async ({ message }: { message: { records: Array<{ data: BufferSource; recordType?: string }> } }) => {
-        const record = message.records[0];
-        if (!record?.data) {
-          setError("No data on card. Use a card with the tap URL or clock code written.");
-          return;
+        try {
+          const record = message.records[0];
+          if (!record?.data) {
+            setError("No data on card. Use a card with the tap URL or clock code written.");
+            return;
+          }
+          const nfcId = nfcPayloadToCardId(record);
+          if (!nfcId) {
+            setError("Could not read card ID. Use a card with the tap URL or enter your code.");
+            return;
+          }
+          setError(null);
+          await clock(nfcId);
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Could not read card. Try again or use the code below.");
         }
-        const nfcId = nfcPayloadToCardId(record);
-        if (!nfcId) {
-          setError("Could not read card ID. Use a card with the tap URL or enter your code.");
-          return;
-        }
-        setError(null);
-        await clock(nfcId);
-        // Reader keeps listening; next scan will clock the next person
       });
       reader.addEventListener("error", () => {
-        setError("Could not read NFC card. Hold card again.");
+        setError("Could not read NFC card. Hold card to the back of the phone again.");
         setIsScanning(false);
       });
     } catch (err) {
@@ -278,6 +286,11 @@ function TapDedicatedPage() {
       setIsScanning(false);
     }
   }, [nfcSupported, location, clock, nfcPayloadToCardId]);
+
+  const stopNfcScan = useCallback(() => {
+    setIsScanning(false);
+    setError(null);
+  }, []);
 
   // Chrome requires a user gesture to start NFC; we can't auto-start in useEffect
 
@@ -329,7 +342,7 @@ function TapDedicatedPage() {
           onClick={() => canTapNfc && startNfcScan()}
           disabled={!canTapNfc}
           className="relative touch-manipulation select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-full disabled:opacity-60 disabled:cursor-not-allowed"
-          aria-label={showNfcPrompt ? "Tap to start NFC, then hold your card" : isScanning ? "Waiting for NFC" : "Enable location to tap"}
+          aria-label={showNfcPrompt ? "Tap to start NFC, then hold your card" : isScanning ? "Hold your NFC card to the back of the phone" : "Enable location to tap"}
         >
           <div className="relative w-40 h-40 sm:w-48 sm:h-48">
             {/* Radiating arcs */}
@@ -345,8 +358,25 @@ function TapDedicatedPage() {
         </button>
 
         <p className="text-sm text-muted-foreground text-center mt-6">
-          {isScanning ? "Waiting for NFC…" : showNfcPrompt ? "Tap the circle above, then hold your card to the phone" : !location ? "Location required first" : !nfcSupported ? getNfcNotSupportedMessage() : null}
+          {isScanning
+            ? "Hold your NFC card to the back of your phone now."
+            : showNfcPrompt
+              ? "Tap the circle above, then hold your card to the phone"
+              : !location
+                ? "Location required first"
+                : !nfcSupported
+                  ? getNfcNotSupportedMessage()
+                  : null}
         </p>
+        {isScanning && (
+          <button
+            type="button"
+            onClick={stopNfcScan}
+            className="mt-2 text-sm text-muted-foreground underline hover:text-foreground"
+          >
+            Cancel
+          </button>
+        )}
 
         {/* Success */}
         {result && (
