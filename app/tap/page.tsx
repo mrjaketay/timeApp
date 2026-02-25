@@ -205,7 +205,7 @@ function TapDedicatedPage() {
           return;
         }
         setResult({
-          type: data.eventType ?? "CLOCK_IN",
+          type: data.eventType === "CLOCK_OUT" ? "CLOCK_OUT" : "CLOCK_IN",
           name: data.employeeName || "You",
         });
         setManualCode("");
