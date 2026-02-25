@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,6 +144,9 @@ function TapDedicatedPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [result, setResult] = useState<{ type: "CLOCK_IN" | "CLOCK_OUT"; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Debounce: ignore NFC reads within this ms of the last processed read (avoids triple-tap). */
+  const lastNfcReadAt = useRef(0);
+  const NFC_READ_COOLDOWN_MS = 3000;
 
   const getLocation = useCallback(() => {
     setIsGettingLocation(true);
@@ -260,6 +263,9 @@ function TapDedicatedPage() {
       );
       await Promise.race([scanPromise, timeout]);
       reader.addEventListener("reading", async ({ message }: { message: { records: Array<{ data: BufferSource; recordType?: string }> } }) => {
+        const now = Date.now();
+        if (now - lastNfcReadAt.current < NFC_READ_COOLDOWN_MS) return;
+        lastNfcReadAt.current = now;
         try {
           const record = message.records[0];
           if (!record?.data) {
@@ -308,125 +314,127 @@ function TapDedicatedPage() {
   const showNfcPrompt = canTapNfc && !isScanning;
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-background">
-      {/* TimeTrack header - style guide blue */}
-      <header className="shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 px-4 py-4 safe-area-inset-top">
-        <div className="flex justify-center">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-slate-50 dark:bg-slate-950">
+      {/* Header */}
+      <header className="shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 px-4 py-4 sm:py-5 safe-area-inset-top shadow-md">
+        <div className="flex justify-center max-w-lg mx-auto">
           <Logo showText={true} size="md" variant="light" />
         </div>
       </header>
 
-      {/* Main: tap instruction + NFC graphic */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-8">
-        {isGettingLocation && !location && !locationError && (
-          <p className="text-sm text-muted-foreground text-center mb-4">Getting location… Allow location access to continue.</p>
-        )}
-        {locationError && (
-          <div className="mb-4 text-center">
-            <p className="text-sm text-destructive">{locationError}</p>
-            <Button variant="outline" size="sm" onClick={getLocation} className="mt-2">Retry location</Button>
-          </div>
-        )}
-
-        {!location && !locationError && !isGettingLocation && (
-          <Button variant="outline" size="sm" onClick={getLocation} className="mb-4">Enable location</Button>
-        )}
-
-        <p className="text-center text-lg sm:text-xl font-semibold text-foreground mb-8 max-w-[260px]">
-          Tap your NFC card to continue
-        </p>
-
-        {/* Tappable NFC graphic: blue circle, card icon, radiating waves */}
-        <button
-          type="button"
-          onClick={() => canTapNfc && startNfcScan()}
-          disabled={!canTapNfc}
-          className="relative touch-manipulation select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-full disabled:opacity-60 disabled:cursor-not-allowed"
-          aria-label={showNfcPrompt ? "Tap to start NFC, then hold your card" : isScanning ? "Hold your NFC card to the back of the phone" : "Enable location to tap"}
-        >
-          <div className="relative w-40 h-40 sm:w-48 sm:h-48">
-            {/* Radiating arcs */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-blue-400/40 animate-pulse" />
-              <div className="absolute w-40 h-40 sm:w-48 sm:h-48 rounded-full border-4 border-blue-300/30 animate-pulse" style={{ animationDelay: "0.3s" }} />
+      {/* Main: centered card-style content */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-10">
+        <div className="w-full max-w-md flex flex-col items-center">
+          {isGettingLocation && !location && !locationError && (
+            <p className="text-sm text-muted-foreground text-center mb-4">Getting location… Allow location access to continue.</p>
+          )}
+          {locationError && (
+            <div className="w-full mb-4 p-4 rounded-xl bg-destructive/5 border border-destructive/20 text-center">
+              <p className="text-sm text-destructive">{locationError}</p>
+              <Button variant="outline" size="sm" onClick={getLocation} className="mt-3">Retry location</Button>
             </div>
-            {/* Blue circle + card icon */}
-            <div className="relative flex items-center justify-center w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 shadow-lg">
-              <CreditCard className="w-12 h-12 sm:w-14 sm:h-14 text-white" strokeWidth={2} />
-            </div>
-          </div>
-        </button>
+          )}
 
-        <p className="text-sm text-muted-foreground text-center mt-6">
-          {isScanning
-            ? "Hold your NFC card to the back of your phone now."
-            : showNfcPrompt
-              ? "Tap the circle above, then hold your card to the phone"
-              : !location
-                ? "Location required first"
-                : !nfcSupported
-                  ? getNfcNotSupportedMessage()
-                  : null}
-        </p>
-        {isScanning && (
+          {!location && !locationError && !isGettingLocation && (
+            <Button variant="outline" size="sm" onClick={getLocation} className="mb-4">Enable location</Button>
+          )}
+
+          <h1 className="text-center text-xl sm:text-2xl font-semibold text-foreground mb-6 sm:mb-10 max-w-[280px] sm:max-w-none">
+            Tap your NFC card to continue
+          </h1>
+
+          {/* Tappable NFC graphic */}
           <button
             type="button"
-            onClick={stopNfcScan}
-            className="mt-2 text-sm text-muted-foreground underline hover:text-foreground"
+            onClick={() => canTapNfc && startNfcScan()}
+            disabled={!canTapNfc}
+            className="relative touch-manipulation select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950 rounded-full disabled:opacity-60 disabled:cursor-not-allowed min-w-[11rem] min-h-[11rem] sm:min-w-[12rem] sm:min-h-[12rem] flex items-center justify-center"
+            aria-label={showNfcPrompt ? "Tap to start NFC, then hold your card" : isScanning ? "Hold your NFC card to the back of the phone" : "Enable location to tap"}
           >
-            Cancel
+            <div className="relative w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-blue-400/40 animate-pulse" />
+                <div className="absolute w-40 h-40 sm:w-48 sm:h-48 rounded-full border-4 border-blue-300/30 animate-pulse" style={{ animationDelay: "0.3s" }} />
+              </div>
+              <div className="relative flex items-center justify-center w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 shadow-xl shadow-blue-900/20">
+                <CreditCard className="w-12 h-12 sm:w-14 sm:h-14 text-white" strokeWidth={2} />
+              </div>
+            </div>
           </button>
-        )}
 
-        {/* Success */}
-        {result && (
-          <div className="mt-6 w-full max-w-sm rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4 text-center">
-            <p className="font-medium text-green-800 dark:text-green-200">
-              {result.type === "CLOCK_IN" ? "Clocked in" : "Clocked out"} — {result.name}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">Hold your card again to clock in/out next time.</p>
-          </div>
-        )}
+          <p className="text-sm text-muted-foreground text-center mt-6 sm:mt-8 max-w-[280px] sm:max-w-sm">
+            {isScanning
+              ? "Hold your NFC card to the back of your phone now."
+              : showNfcPrompt
+                ? "Tap the circle above, then hold your card to the phone"
+                : !location
+                  ? "Location required first"
+                  : !nfcSupported
+                    ? getNfcNotSupportedMessage()
+                    : null}
+          </p>
+          {isScanning && (
+            <button
+              type="button"
+              onClick={stopNfcScan}
+              className="mt-3 text-sm text-muted-foreground underline hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+          )}
 
-        {/* Error */}
-        {error && (
-          <div className="mt-6 w-full max-w-sm rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive text-center space-y-2">
-            <p>{error}</p>
-            {canTapNfc && (
-              <button type="button" className="text-primary underline text-xs" onClick={() => startNfcScan()}>
-                Try again
-              </button>
-            )}
-          </div>
-        )}
+          {/* Success */}
+          {result && (
+            <div className="mt-6 sm:mt-8 w-full rounded-xl bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4 sm:p-5 text-center shadow-sm">
+              <p className="font-semibold text-green-800 dark:text-green-200 text-base sm:text-lg">
+                {result.type === "CLOCK_IN" ? "Clocked in" : "Clocked out"} — {result.name}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Hold your card again to clock in/out next time.</p>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="mt-6 sm:mt-8 w-full rounded-xl bg-destructive/5 border border-destructive/20 p-4 text-sm text-destructive text-center">
+              <p>{error}</p>
+              {canTapNfc && (
+                <button type="button" className="mt-2 text-primary font-medium underline text-xs sm:text-sm" onClick={() => startNfcScan()}>
+                  Try again
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </main>
 
-      {/* Footer: location status + manual code */}
-      <footer className="shrink-0 px-4 py-4 border-t border-border/50 safe-area-inset-bottom">
-        <details className="group">
-          <summary className="text-xs text-muted-foreground cursor-pointer list-none flex items-center justify-between">
-            <span>{location ? `Location ready · ~${Math.round(location.coords.accuracy ?? 0)}m` : "Location"}</span>
-            <span className="group-open:rotate-180 transition-transform">▼</span>
-          </summary>
-          <div className="mt-2 pt-2 border-t border-border/50">
-            <Button variant="ghost" size="sm" onClick={getLocation} disabled={isGettingLocation}>
-              <MapPin className="h-3 w-3 mr-1" /> {isGettingLocation ? "Getting…" : "Refresh location"}
-            </Button>
-            <form onSubmit={handleManualSubmit} className="mt-2 flex gap-2">
-              <Input
-                id="tap-code"
-                placeholder="Or enter clock code"
-                value={manualCode}
-                onChange={(e) => setManualCode(e.target.value)}
-                disabled={isClocking}
-                className="flex-1 text-sm"
-              />
-              <Button type="submit" size="sm" disabled={!location || isClocking || !manualCode.trim()}>
-                Go
+      {/* Footer */}
+      <footer className="shrink-0 px-4 py-4 sm:py-5 bg-white dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 safe-area-inset-bottom">
+        <div className="max-w-md mx-auto">
+          <details className="group rounded-lg">
+            <summary className="text-sm text-muted-foreground cursor-pointer list-none flex items-center justify-between py-2 px-1">
+              <span>{location ? `Location ready · ~${Math.round(location.coords.accuracy ?? 0)}m` : "Location"}</span>
+              <span className="group-open:rotate-180 transition-transform text-muted-foreground">▼</span>
+            </summary>
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 space-y-3">
+              <Button variant="ghost" size="sm" onClick={getLocation} disabled={isGettingLocation} className="w-full sm:w-auto">
+                <MapPin className="h-3.5 w-3.5 mr-2" /> {isGettingLocation ? "Getting…" : "Refresh location"}
               </Button>
-            </form>
-          </div>
-        </details>
+              <form onSubmit={handleManualSubmit} className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  id="tap-code"
+                  placeholder="Or enter clock code"
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value)}
+                  disabled={isClocking}
+                  className="flex-1 text-sm min-w-0"
+                />
+                <Button type="submit" size="sm" disabled={!location || isClocking || !manualCode.trim()} className="sm:shrink-0">
+                  Go
+                </Button>
+              </form>
+            </div>
+          </details>
+        </div>
       </footer>
     </div>
   );
