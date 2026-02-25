@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
-import { MapPin, CreditCard } from "lucide-react";
+import { MapPin, CreditCard, ExternalLink, Clock } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 /** User-friendly message when Web NFC (NDEFReader) is not available. */
 function getNfcNotSupportedMessage(): string {
@@ -142,7 +148,14 @@ function TapDedicatedPage() {
   const [isClocking, setIsClocking] = useState(false);
   const [nfcSupported, setNfcSupported] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [result, setResult] = useState<{ type: "CLOCK_IN" | "CLOCK_OUT"; name: string } | null>(null);
+  const [result, setResult] = useState<{
+    type: "CLOCK_IN" | "CLOCK_OUT";
+    name: string;
+    eventId?: string;
+    clockedInAt?: string;
+  } | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** Debounce: ignore NFC reads within this ms of the last processed read (avoids triple-tap). */
   const lastNfcReadAt = useRef(0);
@@ -198,7 +211,14 @@ function TapDedicatedPage() {
             deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
           }),
         });
-        let data: { error?: string; code?: string; employeeName?: string | null; waitMinutesRemaining?: number; eventType?: string } = {};
+        let data: {
+          error?: string;
+          code?: string;
+          employeeName?: string | null;
+          waitMinutesRemaining?: number;
+          eventType?: string;
+          attendanceEvent?: { id: string; capturedAt: string };
+        } = {};
         try {
           data = await res.json();
         } catch {
@@ -217,10 +237,17 @@ function TapDedicatedPage() {
           }
           return;
         }
+        const eventType = data.eventType === "CLOCK_OUT" ? "CLOCK_OUT" : "CLOCK_IN";
+        const ev = data.attendanceEvent;
         setResult({
-          type: data.eventType === "CLOCK_OUT" ? "CLOCK_OUT" : "CLOCK_IN",
+          type: eventType,
           name: data.employeeName || "You",
+          eventId: ev?.id,
+          clockedInAt: eventType === "CLOCK_IN" && ev?.capturedAt ? ev.capturedAt : undefined,
         });
+        if (eventType === "CLOCK_IN" && ev?.capturedAt) {
+          setElapsedSeconds(0);
+        }
         setManualCode("");
       } catch {
         setError("Network error. Please try again.");
@@ -297,6 +324,22 @@ function TapDedicatedPage() {
     setIsScanning(false);
     setError(null);
   }, []);
+
+  // Running timer when clocked in
+  useEffect(() => {
+    if (!result || result.type !== "CLOCK_IN" || !result.clockedInAt) return;
+    const start = new Date(result.clockedInAt).getTime();
+    const tick = () => setElapsedSeconds(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [result?.type, result?.clockedInAt]);
+
+  function formatElapsed(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
 
   // Chrome requires a user gesture to start NFC; we can't auto-start in useEffect
 
@@ -385,12 +428,86 @@ function TapDedicatedPage() {
 
           {/* Success */}
           {result && (
-            <div className="mt-6 sm:mt-8 w-full rounded-xl bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4 sm:p-5 text-center shadow-sm">
-              <p className="font-semibold text-green-800 dark:text-green-200 text-base sm:text-lg">
-                {result.type === "CLOCK_IN" ? "Clocked in" : "Clocked out"} — {result.name}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Hold your card again to clock in/out next time.</p>
-            </div>
+            <>
+              <button
+                type="button"
+                onClick={() => result.eventId && setDetailsOpen(true)}
+                className="mt-6 sm:mt-8 w-full rounded-2xl bg-green-100 dark:bg-green-900/30 border-2 border-green-200 dark:border-green-800 p-5 sm:p-6 text-center shadow-md hover:bg-green-200/50 dark:hover:bg-green-900/50 hover:border-green-300 dark:hover:border-green-700 transition-colors active:scale-[0.99]"
+              >
+                {result.type === "CLOCK_IN" && result.clockedInAt ? (
+                  <>
+                    <div className="flex items-center justify-center gap-2 text-green-800 dark:text-green-200">
+                      <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
+                      <span className="text-3xl sm:text-4xl font-mono font-bold tabular-nums">
+                        {formatElapsed(elapsedSeconds)}
+                      </span>
+                    </div>
+                    <p className="font-semibold text-green-800 dark:text-green-200 text-base sm:text-lg mt-2">
+                      {result.name} — Clocked in
+                    </p>
+                    <p className="text-sm text-green-700/80 dark:text-green-300/80 mt-1">
+                      Tap for details
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold text-green-800 dark:text-green-200 text-base sm:text-lg">
+                      {result.type === "CLOCK_IN" ? "Clocked in" : "Clocked out"} — {result.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">Hold your card again to clock in/out next time.</p>
+                    {result.eventId && (
+                      <p className="text-xs text-muted-foreground mt-2">Tap for details</p>
+                    )}
+                  </>
+                )}
+              </button>
+
+              <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Shift details</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {result && (
+                      <>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Employee</p>
+                          <p className="font-medium">{result.name}</p>
+                        </div>
+                        {result.clockedInAt && (
+                          <>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Clock-in time</p>
+                              <p className="font-medium">
+                                {new Date(result.clockedInAt).toLocaleString(undefined, {
+                                  dateStyle: "medium",
+                                  timeStyle: "medium",
+                                })}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Time running</p>
+                              <p className="font-mono font-semibold text-lg">{formatElapsed(elapsedSeconds)}</p>
+                            </div>
+                          </>
+                        )}
+                        {result.eventId && (
+                          <a
+                            href={`/dashboard/attendance/${result.eventId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                          >
+                            View in dashboard
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
 
           {/* Error */}

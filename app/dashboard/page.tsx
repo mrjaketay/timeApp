@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { Users, Clock, AlertCircle, Clock3 } from "lucide-react";
 import { WelcomeMessage } from "@/components/welcome-message";
 import { ProfileCompletionBanner } from "@/components/profile-completion-banner";
+import { DashboardRefresh } from "@/components/dashboard-refresh";
 
 export default async function DashboardPage() {
   try {
@@ -154,6 +155,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5 sm:space-y-6 lg:space-y-8 animate-in fade-in duration-500">
+      <DashboardRefresh />
       <ProfileCompletionBanner />
       <div className="flex items-start justify-between">
         <div>
