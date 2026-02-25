@@ -8,6 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { MapPin, CreditCard } from "lucide-react";
 
+/** User-friendly message when Web NFC (NDEFReader) is not available. */
+function getNfcNotSupportedMessage(): string {
+  if (typeof navigator === "undefined") return "NFC not supported — use code below";
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/i.test(ua)) return "NFC not supported on iPhone in this browser — use code below";
+  if (/Android/i.test(ua)) return "NFC not supported in this browser — try Chrome or use code below";
+  if (/Safari/i.test(ua) && !/Chrome|Android/i.test(ua)) return "NFC not supported in Safari — use code below";
+  return "NFC scanning is only available on Android (Chrome). Use the code below on this device.";
+}
+
 /** When ?card= is present: auto clock that card (backward compatibility). */
 function TapWithCard({ cardUid }: { cardUid: string }) {
   const [status, setStatus] = useState<"loading" | "success" | "error" | "no-location">("loading");
@@ -335,7 +345,7 @@ function TapDedicatedPage() {
         </button>
 
         <p className="text-sm text-muted-foreground text-center mt-6">
-          {isScanning ? "Waiting for NFC…" : showNfcPrompt ? "Tap the circle above, then hold your card to the phone" : !location ? "Location required first" : !nfcSupported ? "NFC not supported — use code below" : null}
+          {isScanning ? "Waiting for NFC…" : showNfcPrompt ? "Tap the circle above, then hold your card to the phone" : !location ? "Location required first" : !nfcSupported ? getNfcNotSupportedMessage() : null}
         </p>
 
         {/* Success */}
