@@ -5,7 +5,8 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Radio, MapPin, Clock } from "lucide-react";
+import { Logo } from "@/components/logo";
+import { MapPin, CreditCard } from "lucide-react";
 
 /** When ?card= is present: auto clock that card (backward compatibility). */
 function TapWithCard({ cardUid }: { cardUid: string }) {
@@ -280,108 +281,113 @@ function TapDedicatedPage() {
     clock(code);
   };
 
+  const canTapNfc = nfcSupported && location && !isClocking;
+  const showNfcPrompt = canTapNfc && !isScanning;
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-slate-900">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
-            <Clock className="h-7 w-7" />
-            Clock In / Out
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {nfcSupported
-              ? "Tap once to start, then hold your card to the phone to clock in or out."
-              : "Enter your clock code below, or open the tap link from your card (iPhone)."}
-          </p>
-          {nfcSupported && (
-            <p className="text-xs text-muted-foreground">
-              Your card must have the tap URL or serial written to it (NFC Tools → Write → URL or Text). Get the URL from Dashboard → NFC Cards after registering the card.
-            </p>
-          )}
+    <div className="min-h-screen flex flex-col bg-white dark:bg-background">
+      {/* TimeTrack header - style guide blue */}
+      <header className="shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 px-4 py-4 safe-area-inset-top">
+        <div className="flex justify-center">
+          <Logo showText={true} size="md" variant="light" />
         </div>
+      </header>
 
-        {/* Location */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Location
-            </Label>
-            <Button variant="ghost" size="sm" onClick={getLocation} disabled={isGettingLocation}>
-              {isGettingLocation ? "Getting…" : "Refresh"}
-            </Button>
+      {/* Main: tap instruction + NFC graphic */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+        {isGettingLocation && !location && !locationError && (
+          <p className="text-sm text-muted-foreground text-center mb-4">Getting location… Allow location access to continue.</p>
+        )}
+        {locationError && (
+          <div className="mb-4 text-center">
+            <p className="text-sm text-destructive">{locationError}</p>
+            <Button variant="outline" size="sm" onClick={getLocation} className="mt-2">Retry location</Button>
           </div>
-          {isGettingLocation && <p className="text-sm text-muted-foreground">Getting location…</p>}
-          {location && (
-            <p className="text-sm text-green-600 dark:text-green-400">Ready (accuracy ~{Math.round(location.coords.accuracy ?? 0)}m)</p>
-          )}
-          {locationError && <p className="text-sm text-destructive">{locationError}</p>}
-        </div>
-
-        {/* NFC: one tap to start (Chrome requires user gesture), then hold card */}
-        {nfcSupported && location && (
-          <>
-            {!isScanning ? (
-              <Button
-                className="w-full h-12"
-                size="lg"
-                onClick={() => startNfcScan()}
-                disabled={isClocking}
-              >
-                <Radio className="mr-2 h-4 w-4" />
-                Tap to start, then hold card to phone
-              </Button>
-            ) : (
-              <p className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                <Radio className="h-4 w-4 animate-pulse" />
-                Hold card to phone to clock in/out
-              </p>
-            )}
-          </>
         )}
 
-        {/* Success / Error result */}
+        {!location && !locationError && !isGettingLocation && (
+          <Button variant="outline" size="sm" onClick={getLocation} className="mb-4">Enable location</Button>
+        )}
+
+        <p className="text-center text-lg sm:text-xl font-semibold text-foreground mb-8 max-w-[260px]">
+          Tap your NFC card to continue
+        </p>
+
+        {/* Tappable NFC graphic: blue circle, card icon, radiating waves */}
+        <button
+          type="button"
+          onClick={() => canTapNfc && startNfcScan()}
+          disabled={!canTapNfc}
+          className="relative touch-manipulation select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-full disabled:opacity-60 disabled:cursor-not-allowed"
+          aria-label={showNfcPrompt ? "Tap to start NFC, then hold your card" : isScanning ? "Waiting for NFC" : "Enable location to tap"}
+        >
+          <div className="relative w-40 h-40 sm:w-48 sm:h-48">
+            {/* Radiating arcs */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-blue-400/40 animate-pulse" />
+              <div className="absolute w-40 h-40 sm:w-48 sm:h-48 rounded-full border-4 border-blue-300/30 animate-pulse" style={{ animationDelay: "0.3s" }} />
+            </div>
+            {/* Blue circle + card icon */}
+            <div className="relative flex items-center justify-center w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 shadow-lg">
+              <CreditCard className="w-12 h-12 sm:w-14 sm:h-14 text-white" strokeWidth={2} />
+            </div>
+          </div>
+        </button>
+
+        <p className="text-sm text-muted-foreground text-center mt-6">
+          {isScanning ? "Waiting for NFC…" : showNfcPrompt ? "Tap the circle above, then hold your card to the phone" : !location ? "Location required first" : !nfcSupported ? "NFC not supported — use code below" : null}
+        </p>
+
+        {/* Success */}
         {result && (
-          <div className="rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4 text-center">
+          <div className="mt-6 w-full max-w-sm rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4 text-center">
             <p className="font-medium text-green-800 dark:text-green-200">
               {result.type === "CLOCK_IN" ? "Clocked in" : "Clocked out"} — {result.name}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">Next person can scan a card or enter a code.</p>
+            <p className="text-sm text-muted-foreground mt-1">Hold your card again to clock in/out next time.</p>
           </div>
         )}
+
+        {/* Error */}
         {error && (
-          <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive space-y-2">
+          <div className="mt-6 w-full max-w-sm rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive text-center space-y-2">
             <p>{error}</p>
-            {nfcSupported && location && !isScanning && (
-              <button
-                type="button"
-                className="text-primary underline text-xs"
-                onClick={() => startNfcScan()}
-              >
+            {canTapNfc && (
+              <button type="button" className="text-primary underline text-xs" onClick={() => startNfcScan()}>
                 Try again
               </button>
             )}
           </div>
         )}
+      </main>
 
-        {/* Manual code fallback */}
-        <form onSubmit={handleManualSubmit} className="space-y-2">
-          <Label htmlFor="tap-code">{nfcSupported ? "Or enter your clock code" : "Enter your clock code"}</Label>
-          <div className="flex gap-2">
-            <Input
-              id="tap-code"
-              placeholder="Clock code"
-              value={manualCode}
-              onChange={(e) => setManualCode(e.target.value)}
-              disabled={isClocking}
-              className="flex-1"
-            />
-            <Button type="submit" disabled={!location || isClocking || !manualCode.trim()}>
-              {isClocking ? "…" : "Go"}
+      {/* Footer: location status + manual code */}
+      <footer className="shrink-0 px-4 py-4 border-t border-border/50 safe-area-inset-bottom">
+        <details className="group">
+          <summary className="text-xs text-muted-foreground cursor-pointer list-none flex items-center justify-between">
+            <span>{location ? `Location ready · ~${Math.round(location.coords.accuracy ?? 0)}m` : "Location"}</span>
+            <span className="group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <Button variant="ghost" size="sm" onClick={getLocation} disabled={isGettingLocation}>
+              <MapPin className="h-3 w-3 mr-1" /> {isGettingLocation ? "Getting…" : "Refresh location"}
             </Button>
+            <form onSubmit={handleManualSubmit} className="mt-2 flex gap-2">
+              <Input
+                id="tap-code"
+                placeholder="Or enter clock code"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                disabled={isClocking}
+                className="flex-1 text-sm"
+              />
+              <Button type="submit" size="sm" disabled={!location || isClocking || !manualCode.trim()}>
+                Go
+              </Button>
+            </form>
           </div>
-        </form>
-      </div>
+        </details>
+      </footer>
     </div>
   );
 }
