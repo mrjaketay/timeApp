@@ -325,6 +325,19 @@ function TapDedicatedPage() {
     setError(null);
   }, []);
 
+  const clearSuccess = useCallback(() => {
+    setResult(null);
+    setElapsedSeconds(0);
+    setDetailsOpen(false);
+  }, []);
+
+  // Auto-return to tap interface after success so another clock can take place
+  useEffect(() => {
+    if (!result) return;
+    const id = setTimeout(clearSuccess, 4000);
+    return () => clearTimeout(id);
+  }, [result, clearSuccess]);
+
   // Running timer when clocked in
   useEffect(() => {
     if (!result || result.type !== "CLOCK_IN" || !result.clockedInAt) return;
@@ -461,6 +474,15 @@ function TapDedicatedPage() {
                   </>
                 )}
               </button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSuccess}
+                className="mt-3 w-full sm:w-auto"
+              >
+                Tap again
+              </Button>
 
               <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
                 <DialogContent className="sm:max-w-md">
